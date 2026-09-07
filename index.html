@@ -172,7 +172,7 @@ const PLAYERS_DB = [
  {name:"Franz Beckenbauer", pos:"DEF", nat:"Germany", club:"Bayern Munich", era:"Legend", pace:75,shoot:55,pass:83,defend:89,phys:80},
  {name:"Roberto Carlos", pos:"DEF", nat:"Brazil", club:"Real Madrid", era:"Legend", pace:93,shoot:74,pass:76,defend:81,phys:83},
  {name:"Fabio Cannavaro", pos:"DEF", nat:"Italy", club:"Real Madrid", era:"Legend", pace:76,shoot:35,pass:68,defend:91,phys:79},
- {name:"Lev Yashin", pos:"GK", nat:"USSR", club:"Dynamo Moscow", era:"Legend", pace:60,shoot:20,pass:65,defend:88,phys:78},
+ {name:"Lev Yashin", pos:"GK", nat:"USSR", club:"Dynamo Moscow", era:"Legend", pace:62,shoot:20,pass:65,defend:88,phys:78},
  {name:"Gianluigi Buffon", pos:"GK", nat:"Italy", club:"Juventus", era:"Legend", pace:58,shoot:18,pass:64,defend:90,phys:82},
  {name:"Iker Casillas", pos:"GK", nat:"Spain", club:"Real Madrid", era:"Legend", pace:62,shoot:16,pass:66,defend:89,phys:76},
  {name:"Zinedine Zidane", pos:"MID", nat:"France", club:"Real Madrid", era:"Legend", pace:76,shoot:81,pass:91,defend:64,phys:74},
@@ -204,6 +204,7 @@ const PLAYERS_DB = [
  {name:"Alphonso Davies", pos:"DEF", nat:"Canada", club:"Bayern Munich", era:"Current", pace:97,shoot:60,pass:74,defend:79,phys:74},
  {name:"Alisson Becker", pos:"GK", nat:"Brazil", club:"Liverpool", era:"Current", pace:58,shoot:14,pass:72,defend:87,phys:83},
  {name:"Thibaut Courtois", pos:"GK", nat:"Belgium", club:"Real Madrid", era:"Current", pace:52,shoot:12,pass:68,defend:89,phys:88},
+ {name:"Manuel Neuer", pos:"GK", nat:"Germany", club:"Bayern Munich", era:"Current", pace:55,shoot:15,pass:70,defend:88,phys:85},
 ].map((p,i)=>({...p,id:"p"+i, ovr:Math.round((p.pace+p.shoot+p.pass+p.defend+p.phys)/5)}));
 
 const BOT_NAMES = ["Bot Nacho","Bot Zico","Bot Kova","Bot Dembo","Bot Rilla"];
@@ -947,3 +948,4 @@ render();
   <center><h1>MADE BY EXO</h1></center>
 </footer>
 </html>
+
