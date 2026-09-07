@@ -1079,7 +1079,7 @@ function playerPanelHtml(p){
     </div>
     ${controllable && !p.isBot ? `
     <div class="pp-bidrow">
-      <input class="field" type="number" min="${minNextBid()}" max="${p.money}" value="${draft}" oninput="S.bidDraft['${p.id}']=this.value" ${!canBid?'disabled':''}>
+      <input class="field" id="bidInput-${p.id}" type="number" inputmode="numeric" min="${minNextBid()}" max="${p.money}" value="${draft}" oninput="S.bidDraft['${p.id}']=this.value" ${!canBid?'disabled':''}>
       <button class="btn btn-gold" ${!canBid?'disabled':''} onclick="placeBid('${p.id}', S.bidDraft['${p.id}']||${minNextBid()})">Bid</button>
       <button class="btn btn-red" ${!canPass?'disabled':''} onclick="takeIt('${p.id}')">Take it</button>
     </div>` : ""}
