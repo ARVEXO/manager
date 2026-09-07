@@ -1,0 +1,2 @@
+# manager
+football manager bet
