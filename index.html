@@ -304,17 +304,18 @@ function render(){
   // --- Preserve focus/typing state across re-renders ---
   // Full-screen re-renders (e.g. the once-a-second game ticker) rebuild the
   // whole DOM, which would otherwise steal focus out of any input the user
-  // is actively typing in (like the chat box) and discard unsaved keystrokes.
+  // is actively typing in (chat box, bid box, etc.) and discard unsaved
+  // keystrokes. Every property access is guarded: some input types (e.g.
+  // number) throw when their selection APIs are touched on certain mobile
+  // browsers, and that must never be allowed to abort the render.
   const activeEl = document.activeElement;
   let focusSnapshot = null;
-  if(activeEl && app.contains(activeEl) && /^(INPUT|TEXTAREA|SELECT)$/.test(activeEl.tagName) && activeEl.id){
-    focusSnapshot = {
-      id: activeEl.id,
-      value: activeEl.value,
-      selStart: (typeof activeEl.selectionStart === "number") ? activeEl.selectionStart : null,
-      selEnd: (typeof activeEl.selectionEnd === "number") ? activeEl.selectionEnd : null
-    };
-  }
+  try{
+    if(activeEl && app.contains(activeEl) && /^(INPUT|TEXTAREA|SELECT)$/.test(activeEl.tagName) && activeEl.id){
+      focusSnapshot = { id: activeEl.id, value: activeEl.value, selStart: null, selEnd: null };
+      try{ focusSnapshot.selStart = activeEl.selectionStart; focusSnapshot.selEnd = activeEl.selectionEnd; }catch(e){}
+    }
+  }catch(e){ focusSnapshot = null; }
 
   let html = "";
   switch(S.screen){
@@ -333,17 +334,20 @@ function render(){
 
   // --- Restore focus/typing state ---
   if(focusSnapshot){
-    const el = document.getElementById(focusSnapshot.id);
-    if(el){
-      // Only override the value if the template didn't already restore it
-      // from state (e.g. search box bound to S._playerSearch); this keeps
-      // whatever the user was mid-typing from being wiped by the rebuild.
-      if(el.value !== focusSnapshot.value) el.value = focusSnapshot.value;
-      el.focus();
-      if(focusSnapshot.selStart !== null && el.setSelectionRange){
-        try{ el.setSelectionRange(focusSnapshot.selStart, focusSnapshot.selEnd); }catch(e){}
+    try{
+      const el = document.getElementById(focusSnapshot.id);
+      if(el){
+        // Only override the value if the template didn't already restore it
+        // from state (e.g. search box bound to S._playerSearch, bid box
+        // bound to S.bidDraft); this keeps whatever the user was mid-typing
+        // from being wiped by the rebuild.
+        if(el.value !== focusSnapshot.value) el.value = focusSnapshot.value;
+        el.focus();
+        if(focusSnapshot.selStart !== null && el.setSelectionRange){
+          try{ el.setSelectionRange(focusSnapshot.selStart, focusSnapshot.selEnd); }catch(e){}
+        }
       }
-    }
+    }catch(e){}
   }
 
   const chatFeedEl = document.getElementById("chatFeedBox");
@@ -1079,7 +1083,7 @@ function playerPanelHtml(p){
     </div>
     ${controllable && !p.isBot ? `
     <div class="pp-bidrow">
-      <input class="field" id="bidInput-${p.id}" type="number" inputmode="numeric" min="${minNextBid()}" max="${p.money}" value="${draft}" oninput="S.bidDraft['${p.id}']=this.value" ${!canBid?'disabled':''}>
+      <input class="field" id="bidInput-${p.id}" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${draft}" oninput="S.bidDraft['${p.id}']=this.value.replace(/[^0-9]/g,'')" ${!canBid?'disabled':''}>
       <button class="btn btn-gold" ${!canBid?'disabled':''} onclick="placeBid('${p.id}', S.bidDraft['${p.id}']||${minNextBid()})">Bid</button>
       <button class="btn btn-red" ${!canPass?'disabled':''} onclick="takeIt('${p.id}')">Take it</button>
     </div>` : ""}
