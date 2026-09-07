@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kickoff Auction — Footballer Bet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+:root{
+  --bg:#0E1613;
+  --bg-alt:#152420;
+  --panel:#182B25;
+  --panel-2:#1E332C;
+  --line:#2B4238;
+  --pitch:#3E9463;
+  --pitch-dim:#2A6146;
+  --gold:#D8A94C;
+  --gold-dim:#8C743A;
+  --red:#C0463A;
+  --paper:#EDEBDF;
+  --muted:#8FA39A;
+  --muted-2:#5E7269;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:radial-gradient(ellipse at 50% -10%, #1B3129 0%, var(--bg) 55%);
+  color:var(--paper);
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.display{font-family:'Oswald',sans-serif;letter-spacing:0.01em;}
+button{font-family:'Inter',sans-serif;cursor:pointer;border:none;}
+button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+#app{max-width:1180px;margin:0 auto;padding:20px 18px 60px;}
+
+.btn{background:var(--panel-2);color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 20px;font-size:15px;font-weight:600;transition:transform .08s ease, border-color .15s ease, background .15s ease;}
+.btn:hover{border-color:var(--pitch);background:#213B32;}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:var(--pitch);border-color:var(--pitch);color:#08130F;}
+.btn-primary:hover{background:#4CAE74;border-color:#4CAE74;}
+.btn-gold{background:var(--gold);border-color:var(--gold);color:#241B04;}
+.btn-gold:hover{background:#E8BE68;}
+.btn-red{background:transparent;border-color:var(--red);color:#F0958A;}
+.btn-red:hover{background:rgba(192,70,58,.18);}
+.btn-block{width:100%;}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+.card-surface{background:var(--panel);border:1px solid var(--line);border-radius:10px;}
+.pill{display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:.03em;border:1px solid var(--line);color:var(--muted);}
+.field{width:100%;padding:11px 12px;background:var(--bg-alt);border:1px solid var(--line);border-radius:6px;color:var(--paper);font-size:15px;}
+.hint{color:var(--muted);font-size:13px;line-height:1.5;}
+.row{display:flex;gap:10px;}
+.wrap{flex-wrap:wrap;}
+.center{display:flex;align-items:center;justify-content:center;}
+.sep{height:1px;background:var(--line);margin:18px 0;}
+
+.hero{text-align:center;padding:46px 10px 30px;}
+.hero .kicker{color:var(--pitch);font-weight:600;letter-spacing:.08em;font-size:13px;margin-bottom:10px;}
+.hero h1{font-size:clamp(34px,7vw,58px);margin:0 0 10px;line-height:1;color:var(--paper);}
+.hero h1 span{color:var(--gold);}
+.hero p{color:var(--muted);max-width:480px;margin:0 auto;font-size:15.5px;line-height:1.6;}
+
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:36px;}
+@media(max-width:640px){.menu-grid{grid-template-columns:1fr;}}
+.mode-card{padding:26px 22px;text-align:left;}
+.mode-card h2{font-size:22px;margin:0 0 8px;}
+.mode-card p{color:var(--muted);font-size:14px;line-height:1.55;margin:0 0 18px;}
+
+.section-title{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-2);margin-bottom:10px;font-weight:600;}
+.choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;}
+.choice{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 10px;text-align:center;color:var(--paper);}
+.choice .n{font-family:'Oswald';font-size:28px;color:var(--gold);}
+.choice .l{font-size:12px;color:var(--muted);margin-top:2px;}
+.choice.active{border-color:var(--pitch);background:#1D362C;box-shadow:0 0 0 1px var(--pitch) inset;}
+
+.lobby-players{display:flex;flex-direction:column;gap:8px;margin:14px 0;}
+.lobby-player{display:flex;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--pitch-dim);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;overflow:hidden;flex-shrink:0;}
+.avatar img{width:100%;height:100%;object-fit:cover;}
+.room-code{font-family:'Oswald';font-size:38px;letter-spacing:.12em;color:var(--gold);background:var(--bg-alt);border:1px dashed var(--gold-dim);border-radius:8px;padding:14px 20px;text-align:center;}
+
+.vote-option{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;cursor:pointer;transition:border-color .15s;}
+.vote-option:hover{border-color:var(--pitch);}
+.vote-option h3{margin:0 0 6px;font-size:17px;}
+.vote-option p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.5;}
+.vote-tally{display:flex;gap:4px;margin-top:10px;flex-wrap:wrap;}
+.vote-tally .dot{width:9px;height:9px;border-radius:50%;background:var(--gold);}
+
+.game-top{display:flex;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 18px;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.game-top .label{font-size:11px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.07em;}
+.game-top .val{font-family:'Oswald';font-size:22px;color:var(--paper);}
+.timer-val{color:var(--gold);}
+.timer-val.low{color:var(--red);}
+
+.auction-wrap{background:linear-gradient(180deg,#1A2E27,#132420);border:1px solid var(--line);border-radius:14px;padding:26px;margin-bottom:18px;}
+.pcard{display:flex;gap:22px;align-items:center;flex-wrap:wrap;justify-content:center;}
+.pcard-portrait{width:96px;height:96px;border-radius:50%;background:linear-gradient(160deg,var(--pitch),#1E4531);display:flex;align-items:center;justify-content:center;font-family:'Oswald';font-size:34px;color:#fff;border:3px solid var(--gold);flex-shrink:0;overflow:hidden;}
+.pcard-portrait img{width:100%;height:100%;object-fit:cover;}
+.pcard-info h2{margin:0 0 4px;font-size:26px;}
+.pcard-info .meta{color:var(--muted);font-size:13.5px;margin-bottom:10px;}
+.pcard-stats{display:flex;gap:14px;flex-wrap:wrap;}
+.stat-chip{text-align:center;}
+.stat-chip .v{font-family:'Oswald';font-size:19px;color:var(--paper);}
+.stat-chip .k{font-size:10px;color:var(--muted-2);letter-spacing:.05em;text-transform:uppercase;}
+.ovr-badge{background:var(--gold);color:#241B04;font-family:'Oswald';font-weight:600;border-radius:8px;padding:8px 14px;text-align:center;min-width:64px;}
+.ovr-badge .v{font-size:26px;line-height:1;}
+.ovr-badge .k{font-size:10px;letter-spacing:.05em;}
+.prime-tag{background:var(--red);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:100px;margin-left:6px;letter-spacing:.03em;}
+.regular-tag{background:var(--muted-2);color:#0E1613;font-size:11px;font-weight:700;padding:3px 8px;border-radius:100px;margin-left:6px;letter-spacing:.03em;}
+
+.bid-status{margin-top:22px;text-align:center;}
+.bid-status .amount{font-family:'Oswald';font-size:44px;color:var(--gold);}
+.bid-status .by{color:var(--muted);font-size:14px;}
+
+.players-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:18px;}
+.player-panel{padding:16px;}
+.player-panel.leader{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;}
+.player-panel.passed{opacity:.55;}
+.pp-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.pp-name{font-weight:700;font-size:15px;}
+.pp-money{font-family:'Oswald';color:var(--gold);font-size:19px;}
+.pp-bidrow{display:flex;gap:8px;margin-top:10px;}
+.pp-bidrow input{width:70px;}
+.pp-slots{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;}
+.slot{flex:1;min-width:52px;border:1.5px dashed var(--line);border-radius:6px;padding:5px 4px;text-align:center;font-size:11px;color:var(--muted-2);min-height:70px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;}
+.slot.filled{border-style:solid;border-color:var(--pitch-dim);background:var(--bg-alt);color:var(--paper);}
+.slot.mismatch{border-color:var(--red);}
+.slot-photo{width:26px;height:26px;border-radius:50%;overflow:hidden;background:var(--pitch-dim);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;}
+.slot-photo img{width:100%;height:100%;object-fit:cover;}
+.slot .sname{font-size:10px;font-weight:600;line-height:1.15;}
+.slot .sovr{font-family:'Oswald';font-size:14px;color:var(--gold);}
+.pp-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+.list-chip{background:var(--bg-alt);border:1px solid var(--line);border-radius:5px;padding:3px 8px 3px 3px;font-size:11px;display:flex;align-items:center;gap:5px;}
+.list-chip .cp{width:18px;height:18px;border-radius:50%;overflow:hidden;background:var(--pitch-dim);flex-shrink:0;}
+.list-chip .cp img{width:100%;height:100%;object-fit:cover;}
+
+.log-feed{background:var(--bg-alt);border:1px solid var(--line);border-radius:10px;padding:12px 16px;max-height:150px;overflow-y:auto;font-size:13px;color:var(--muted);display:flex;flex-direction:column-reverse;}
+.log-feed div{padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03);}
+.log-feed .me{color:var(--gold);}
+
+.assign-banner{background:var(--gold);color:#241B04;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+
+.result-row{display:flex;align-items:center;gap:16px;padding:16px;margin-bottom:10px;}
+.result-rank{font-family:'Oswald';font-size:30px;color:var(--muted-2);width:38px;}
+.result-row.win{border-color:var(--gold);}
+.result-row.win .result-rank{color:var(--gold);}
+.result-name{font-weight:700;font-size:17px;flex:1;}
+.result-score{font-family:'Oswald';font-size:26px;color:var(--paper);}
+
+.notice{background:var(--bg-alt);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:13.5px;color:var(--muted);margin-top:14px;}
+.notice.err{border-color:var(--red);color:#F0958A;}
+.topbar-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;}
+.brand{font-family:'Oswald';font-size:19px;color:var(--paper);}
+.brand span{color:var(--gold);}
+.spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--gold);animation:sp 0.8s linear infinite;margin:0 auto 14px;}
+@keyframes sp{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* =========================================================================
+   DATA
+   ========================================================================= */
+const PLAYERS_DB = [
+ {name:"Paolo Maldini", pos:"DEF", nat:"Italy", club:"AC Milan", era:"Legend", pace:78,shoot:42,pass:71,defend:94,phys:86},
+ {name:"Franco Baresi", pos:"DEF", nat:"Italy", club:"AC Milan", era:"Legend", pace:74,shoot:38,pass:74,defend:93,phys:82},
+ {name:"Franz Beckenbauer", pos:"DEF", nat:"Germany", club:"Bayern Munich", era:"Legend", pace:75,shoot:55,pass:83,defend:89,phys:80},
+ {name:"Roberto Carlos", pos:"DEF", nat:"Brazil", club:"Real Madrid", era:"Legend", pace:93,shoot:74,pass:76,defend:81,phys:83},
+ {name:"Fabio Cannavaro", pos:"DEF", nat:"Italy", club:"Real Madrid", era:"Legend", pace:76,shoot:35,pass:68,defend:91,phys:79},
+ {name:"Lev Yashin", pos:"GK", nat:"USSR", club:"Dynamo Moscow", era:"Legend", pace:60,shoot:20,pass:65,defend:88,phys:78},
+ {name:"Gianluigi Buffon", pos:"GK", nat:"Italy", club:"Juventus", era:"Legend", pace:58,shoot:18,pass:64,defend:90,phys:82},
+ {name:"Iker Casillas", pos:"GK", nat:"Spain", club:"Real Madrid", era:"Legend", pace:62,shoot:16,pass:66,defend:89,phys:76},
+ {name:"Zinedine Zidane", pos:"MID", nat:"France", club:"Real Madrid", era:"Legend", pace:76,shoot:81,pass:91,defend:64,phys:74},
+ {name:"Diego Maradona", pos:"MID", nat:"Argentina", club:"Napoli", era:"Legend", pace:85,shoot:87,pass:89,defend:47,phys:65},
+ {name:"Ronaldinho", pos:"MID", nat:"Brazil", club:"Barcelona", era:"Legend", pace:87,shoot:84,pass:89,defend:39,phys:70},
+ {name:"Andrea Pirlo", pos:"MID", nat:"Italy", club:"Juventus", era:"Legend", pace:62,shoot:76,pass:92,defend:60,phys:63},
+ {name:"George Best", pos:"MID", nat:"N. Ireland", club:"Manchester Utd", era:"Legend", pace:88,shoot:80,pass:80,defend:45,phys:66},
+ {name:"Xavi Hernandez", pos:"MID", nat:"Spain", club:"Barcelona", era:"Legend", pace:68,shoot:69,pass:93,defend:63,phys:58},
+ {name:"Ronaldo Nazario", pos:"ST", nat:"Brazil", club:"Real Madrid", era:"Legend", pace:96,shoot:92,pass:73,defend:29,phys:78},
+ {name:"Pele", pos:"ST", nat:"Brazil", club:"Santos", era:"Legend", pace:91,shoot:93,pass:81,defend:35,phys:74},
+ {name:"Johan Cruyff", pos:"ST", nat:"Netherlands", club:"Ajax", era:"Legend", pace:89,shoot:87,pass:85,defend:40,phys:66},
+ {name:"Thierry Henry", pos:"ST", nat:"France", club:"Arsenal", era:"Legend", pace:94,shoot:89,pass:76,defend:32,phys:75},
+ {name:"Marco van Basten", pos:"ST", nat:"Netherlands", club:"AC Milan", era:"Legend", pace:82,shoot:91,pass:74,defend:34,phys:79},
+ {name:"Alfredo Di Stefano", pos:"ST", nat:"Argentina", club:"Real Madrid", era:"Legend", pace:84,shoot:88,pass:80,defend:44,phys:73},
+ {name:"Lionel Messi", pos:"ST", nat:"Argentina", club:"Inter Miami", era:"Current", pace:80,shoot:90,pass:91,defend:34,phys:65},
+ {name:"Cristiano Ronaldo", pos:"ST", nat:"Portugal", club:"Al Nassr", era:"Current", pace:81,shoot:93,pass:78,defend:33,phys:77},
+ {name:"Kylian Mbappe", pos:"ST", nat:"France", club:"Real Madrid", era:"Current", pace:97,shoot:89,pass:75,defend:36,phys:76},
+ {name:"Erling Haaland", pos:"ST", nat:"Norway", club:"Manchester City", era:"Current", pace:89,shoot:92,pass:66,defend:35,phys:88},
+ {name:"Vinicius Jr", pos:"ST", nat:"Brazil", club:"Real Madrid", era:"Current", pace:95,shoot:83,pass:75,defend:29,phys:66},
+ {name:"Harry Kane", pos:"ST", nat:"England", club:"Bayern Munich", era:"Current", pace:76,shoot:90,pass:83,defend:41,phys:82},
+ {name:"Kevin De Bruyne", pos:"MID", nat:"Belgium", club:"Napoli", era:"Current", pace:74,shoot:86,pass:93,defend:64,phys:76},
+ {name:"Jude Bellingham", pos:"MID", nat:"England", club:"Real Madrid", era:"Current", pace:81,shoot:83,pass:84,defend:71,phys:82},
+ {name:"Pedri", pos:"MID", nat:"Spain", club:"Barcelona", era:"Current", pace:75,shoot:71,pass:88,defend:65,phys:62},
+ {name:"Rodri", pos:"MID", nat:"Spain", club:"Manchester City", era:"Current", pace:68,shoot:73,pass:89,defend:85,phys:82},
+ {name:"Bukayo Saka", pos:"MID", nat:"England", club:"Arsenal", era:"Current", pace:88,shoot:80,pass:81,defend:58,phys:68},
+ {name:"Virgil van Dijk", pos:"DEF", nat:"Netherlands", club:"Liverpool", era:"Current", pace:79,shoot:47,pass:73,defend:92,phys:87},
+ {name:"Achraf Hakimi", pos:"DEF", nat:"Morocco", club:"Paris SG", era:"Current", pace:96,shoot:69,pass:79,defend:77,phys:75},
+ {name:"Ruben Dias", pos:"DEF", nat:"Portugal", club:"Manchester City", era:"Current", pace:73,shoot:38,pass:70,defend:90,phys:85},
+ {name:"Alphonso Davies", pos:"DEF", nat:"Canada", club:"Bayern Munich", era:"Current", pace:97,shoot:60,pass:74,defend:79,phys:74},
+ {name:"Alisson Becker", pos:"GK", nat:"Brazil", club:"Liverpool", era:"Current", pace:58,shoot:14,pass:72,defend:87,phys:83},
+ {name:"Thibaut Courtois", pos:"GK", nat:"Belgium", club:"Real Madrid", era:"Current", pace:52,shoot:12,pass:68,defend:89,phys:88},
+].map((p,i)=>({...p,id:"p"+i, ovr:Math.round((p.pace+p.shoot+p.pass+p.defend+p.phys)/5)}));
+
+const BOT_NAMES = ["Bot Nacho","Bot Zico","Bot Kova","Bot Dembo","Bot Rilla"];
+const SLOT_TEMPLATE = ["GK","DEF","MID","ST","ST"];
+const TOTAL_ROUNDS = 8;
+const START_MONEY = 30;
+const ROUND_SECONDS = 180;
+const ROOM_PREFIX = "kickoff-auction-";
+
+function catOf(pos){ return pos==="GK"?"GK":pos==="DEF"?"DEF":pos==="MID"?"MID":"ST"; }
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function shuffle(a){ a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+function fmt(n){ return "$"+n; }
+function initials(name){ return name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase(); }
+
+/* =========================================================================
+   PLAYER PHOTOS — live lookup from Wikipedia's public summary API, cached.
+   ========================================================================= */
+const PHOTO_CACHE = {};
+async function ensurePhoto(name){
+  if(PHOTO_CACHE[name]!==undefined) return;
+  PHOTO_CACHE[name]=null;
+  try{
+    const resp = await fetch("https://en.wikipedia.org/api/rest_v1/page/summary/"+encodeURIComponent(name.replace(/ /g,"_")));
+    if(resp.ok){
+      const j = await resp.json();
+      PHOTO_CACHE[name] = (j.thumbnail && j.thumbnail.source) ? j.thumbnail.source : null;
+    }
+  }catch(e){ PHOTO_CACHE[name]=null; }
+  render();
+}
+function portraitHtml(name, sizeClass){
+  if(PHOTO_CACHE[name]===undefined) ensurePhoto(name);
+  if(PHOTO_CACHE[name]){
+    return `<img src="${PHOTO_CACHE[name]}" alt="${name}" loading="lazy">`;
+  }
+  return initials(name);
+}
+
+/* =========================================================================
+   STATE
+   ========================================================================= */
+let S = {
+  screen:"menu",
+  mode:null,
+  isHost:false,
+  roomCode:null,
+  myId:null,
+  peer:null, hostConn:null, conns:[], connMap:new Map(),
+  settings:{ humanCount:2, botCount:0, playerType:null, ruleMode:null },
+  players:[],
+  votes:{ type:{}, mode:{} },
+  usedIds:new Set(),
+  round:0,
+  totalRounds:TOTAL_ROUNDS,
+  card:null,
+  bid:{amount:0,byId:null},
+  passed:new Set(),
+  log:[],
+  roundEndsAt:0,
+  awaitingAssign:null,
+  wonCard:null,
+  gameOver:false,
+  bidDraft:{},
+  connectMsg:"", connectErr:"",
+  _tick:null
+};
+
+function resetGameKeepMode(){
+  S.players=[]; S.votes={type:{},mode:{}}; S.usedIds=new Set(); S.round=0; S.card=null;
+  S.bid={amount:0,byId:null}; S.passed=new Set(); S.log=[]; S.roundEndsAt=0;
+  S.awaitingAssign=null; S.wonCard=null; S.gameOver=false; S.bidDraft={};
+}
+function addLog(msg, mine){ S.log.push({msg, mine:!!mine}); if(S.log.length>60) S.log.shift(); }
+function makePlayer(name,isBot){
+  return { id:uid(), name, isBot:!!isBot, money:START_MONEY, slots:[null,null,null,null,null], list:[], connected:true };
+}
+
+/* =========================================================================
+   RENDER
+   ========================================================================= */
+function render(){
+  const app = document.getElementById("app");
+  let html = "";
+  switch(S.screen){
+    case "menu": html = screenMenu(); break;
+    case "offlineSetup": html = screenOfflineSetup(); break;
+    case "onlineMenu": html = screenOnlineMenu(); break;
+    case "connecting": html = screenConnecting(); break;
+    case "lobby": html = screenLobby(); break;
+    case "voting": html = screenVoting(); break;
+    case "game": html = screenGame(); break;
+    case "result": html = screenResult(); break;
+    default: html = screenMenu();
+  }
+  app.innerHTML = topBar() + html;
+}
+function topBar(){
+  if(S.screen==="menu") return "";
+  return `<div class="topbar-nav"><div class="brand">KICKOFF <span>AUCTION</span></div><button class="btn" onclick="goMenu()">Exit to menu</button></div>`;
+}
+function goMenu(){
+  clearInterval(S._tick);
+  teardownNetwork();
+  S.screen="menu"; S.mode=null; S.isHost=false; S.roomCode=null; S.myId=null;
+  resetGameKeepMode(); render();
+}
+function teardownNetwork(){
+  try{ S.conns.forEach(c=>c.close()); }catch(e){}
+  try{ if(S.hostConn) S.hostConn.close(); }catch(e){}
+  try{ if(S.peer) S.peer.destroy(); }catch(e){}
+  S.peer=null; S.hostConn=null; S.conns=[]; S.connMap=new Map();
+}
+
+/* =========================================================================
+   MENU
+   ========================================================================= */
+function screenMenu(){
+  return `
+  <div class="hero">
+    <div class="kicker">A LIVE BIDDING FOOTBALL GAME</div>
+    <h1>Build the best XI,<br>one <span>bid</span> at a time.</h1>
+    <p>Every 3 minutes a footballer goes up for auction. Outbid the table, spend your $${START_MONEY} wisely, and finish with the strongest squad — by position, or by pure collection power.</p>
+  </div>
+  <div class="menu-grid">
+    <div class="card-surface mode-card">
+      <h2>Play Online</h2>
+      <p>Create a room and share the code, or join a friend's room. This connects browser-to-browser directly — keep this tab open on both sides.</p>
+      <div class="row wrap">
+        <button class="btn btn-primary" onclick="goOnlineMenu('create')">Create room</button>
+        <button class="btn" onclick="goOnlineMenu('join')">Join room</button>
+      </div>
+    </div>
+    <div class="card-surface mode-card">
+      <h2>Play Offline</h2>
+      <p>Pass the same device around — 2, 3 or 4 players on one screen, or go head-to-head against the bot.</p>
+      <button class="btn btn-gold btn-block" onclick="goOfflineSetup()">Offline / vs Bot</button>
+    </div>
+  </div>
+  <div class="notice">Online play needs an internet connection on both ends (it uses WebRTC, no account or server needed). If a connection ever fails, just re-create the room and share the new code.</div>
+  `;
+}
+
+/* =========================================================================
+   OFFLINE SETUP
+   ========================================================================= */
+function goOfflineSetup(){ S.mode="offline"; S.screen="offlineSetup"; S.settings={humanCount:2,botCount:0,playerType:null,ruleMode:null}; render(); }
+function screenOfflineSetup(){
+  const s=S.settings;
+  const humanChoices=[2,3,4].map(n=>`<div class="choice ${s.humanCount===n && !s._vsBot?'active':''}" onclick="setOfflineHumans(${n})"><div class="n">${n}</div><div class="l">players</div></div>`).join("");
+  return `
+  <h2>Offline setup</h2>
+  <p class="hint">Everyone plays on this device, taking turns clicking their own panel during the auction.</p>
+  <div class="sep"></div>
+  <div class="section-title">Number of players</div>
+  <div class="choice-grid">${humanChoices}
+    <div class="choice ${s._vsBot?'active':''}" onclick="setOfflineVsBot()"><div class="n">1v1</div><div class="l">vs Bot</div></div>
+  </div>
+  <div class="sep"></div>
+  <div class="section-title">Player type pool</div>
+  <div class="choice-grid">${["Legends only","Current players","Mixed players"].map(t=>`<div class="choice ${s.playerType===t?'active':''}" onclick="setOfflineField('playerType','${t}')">${t}</div>`).join("")}</div>
+  <div class="sep"></div>
+  <div class="section-title">Squad rule</div>
+  <div class="choice-grid">
+    <div class="choice ${s.ruleMode==='Position Matter'?'active':''}" onclick="setOfflineField('ruleMode','Position Matter')">Position Matter</div>
+    <div class="choice ${s.ruleMode==='Collection'?'active':''}" onclick="setOfflineField('ruleMode','Collection')">Collection</div>
+  </div>
+  <div class="sep"></div>
+  <button class="btn btn-primary btn-block" ${(!s.playerType||!s.ruleMode)?'disabled':''} onclick="startOfflineGame()">Start match</button>
+  `;
+}
+function setOfflineHumans(n){ S.settings.humanCount=n; S.settings._vsBot=false; S.settings.botCount=0; render(); }
+function setOfflineVsBot(){ S.settings.humanCount=1; S.settings._vsBot=true; S.settings.botCount=1; render(); }
+function setOfflineField(k,v){ S.settings[k]=v; render(); }
+function startOfflineGame(){
+  resetGameKeepMode();
+  const s=S.settings;
+  for(let i=0;i<s.humanCount;i++) S.players.push(makePlayer("Player "+(i+1),false));
+  for(let i=0;i<s.botCount;i++) S.players.push(makePlayer(BOT_NAMES[i%BOT_NAMES.length],true));
+  beginRound();
+  S.screen="game";
+  startTicker();
+  render();
+}
+
+/* =========================================================================
+   ONLINE — PeerJS networking
+   ========================================================================= */
+function peerIdFor(code){ return ROOM_PREFIX+code.toLowerCase(); }
+function genCode(){ const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s=""; for(let i=0;i<4;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
+
+function goOnlineMenu(kind){ S.mode="online"; S.screen="onlineMenu"; S._onlineKind=kind; S.connectErr=""; render(); }
+function screenOnlineMenu(){
+  const kind = S._onlineKind||"create";
+  return `
+  <div class="row wrap" style="margin-bottom:18px;">
+    <button class="btn ${kind==='create'?'btn-primary':''}" onclick="S._onlineKind='create';render();">Create room</button>
+    <button class="btn ${kind==='join'?'btn-primary':''}" onclick="S._onlineKind='join';render();">Join room</button>
+  </div>
+  ${kind==='create' ? screenOnlineCreate() : screenOnlineJoin()}
+  `;
+}
+function screenOnlineCreate(){
+  const s=S.settings;
+  return `
+  <div class="card-surface" style="padding:22px;">
+    <div class="section-title">Your name</div>
+    <input class="field" id="hostName" placeholder="e.g. Rafi" value="${S._hostName||''}" oninput="S._hostName=this.value">
+    <div class="sep"></div>
+    <div class="section-title">Room size (humans)</div>
+    <div class="choice-grid">${[2,3,4].map(n=>`<div class="choice ${s.humanCount===n?'active':''}" onclick="S.settings.humanCount=${n};render();"><div class="n">${n}</div><div class="l">players</div></div>`).join("")}</div>
+    <div class="sep"></div>
+    <div class="section-title">Add bots to fill empty seats?</div>
+    <div class="choice-grid">${[0,1,2].map(n=>`<div class="choice ${(s.botCount||0)===n?'active':''}" onclick="S.settings.botCount=${n};render();"><div class="n">${n}</div><div class="l">bots</div></div>`).join("")}</div>
+    <div class="sep"></div>
+    <button class="btn btn-primary btn-block" onclick="createOnlineRoom()">Create room</button>
+    ${S.connectErr?`<div class="notice err">${S.connectErr}</div>`:""}
+  </div>`;
+}
+function screenOnlineJoin(){
+  return `
+  <div class="card-surface" style="padding:22px;">
+    <div class="section-title">Your name</div>
+    <input class="field" id="joinName" placeholder="e.g. Dinda" value="${S._joinName||''}" oninput="S._joinName=this.value">
+    <div class="sep"></div>
+    <div class="section-title">Room code</div>
+    <input class="field" id="joinCode" placeholder="e.g. AB3K" maxlength="5" style="text-transform:uppercase;" value="${S._joinCode||''}" oninput="S._joinCode=this.value.toUpperCase()">
+    <div class="sep"></div>
+    <button class="btn btn-primary btn-block" onclick="joinOnlineRoom()">Join room</button>
+    ${S.connectErr?`<div class="notice err">${S.connectErr}</div>`:""}
+  </div>`;
+}
+function screenConnecting(){
+  return `<div class="card-surface" style="padding:40px;text-align:center;">
+    <div class="spin"></div>
+    <div>${S.connectMsg||"Connecting…"}</div>
+  </div>`;
+}
+
+async function createOnlineRoom(){
+  const name=(document.getElementById("hostName")?.value||S._hostName||"Host").trim()||"Host";
+  S._hostName=name;
+  resetGameKeepMode();
+  S.mode="online"; S.isHost=true; S.conns=[]; S.connMap=new Map();
+  const me=makePlayer(name,false);
+  S.myId=me.id; S.players=[me];
+  for(let i=0;i<(S.settings.botCount||0);i++) S.players.push(makePlayer(BOT_NAMES[i], true));
+  S.settings.capacity = S.settings.humanCount;
+  S.connectErr=""; S.connectMsg="Opening room…"; S.screen="connecting"; render();
+  attemptHostPeer(genCode(), 0);
+}
+function attemptHostPeer(code, attempt){
+  teardownNetwork();
+  const peer = new Peer(peerIdFor(code), { debug:0 });
+  S.peer = peer;
+  peer.on("open", ()=>{
+    S.roomCode=code; S.screen="lobby"; render();
+  });
+  peer.on("connection", conn=>{
+    conn.on("open", ()=>{});
+    conn.on("data", data=>{
+      if(data.type==="join") hostHandleJoin(conn, data.name);
+      else if(data.type==="action") execAction(data.action, data.payload);
+    });
+    conn.on("close", ()=> hostHandleDisconnect(conn));
+  });
+  peer.on("error", err=>{
+    if(err.type==="unavailable-id" && attempt<6){ attemptHostPeer(genCode(), attempt+1); }
+    else { S.connectErr="Could not open a room ("+err.type+"). Check your connection and try again."; S.screen="onlineMenu"; S._onlineKind="create"; render(); }
+  });
+}
+function hostHandleJoin(conn, name){
+  if(S.screen!=="lobby"){ conn.send({type:"error", message:"This room already started."}); return; }
+  const humanCount = S.players.filter(p=>!p.isBot).length;
+  if(humanCount>=(S.settings.capacity||4)){ conn.send({type:"error", message:"Room is full."}); return; }
+  const p = makePlayer((name||"Player").trim()||"Player", false);
+  S.players.push(p);
+  S.connMap.set(conn, p.id);
+  S.conns.push(conn);
+  conn.send({type:"welcome", myId:p.id});
+  broadcastState();
+  render();
+}
+function hostHandleDisconnect(conn){
+  const pid = S.connMap.get(conn);
+  if(pid){
+    const p = S.players.find(x=>x.id===pid);
+    if(p) p.connected=false;
+    addLog((p?p.name:"A player")+" disconnected.");
+  }
+  S.conns = S.conns.filter(c=>c!==conn);
+  broadcastState();
+  render();
+}
+function broadcastState(){
+  const payload = {type:"state", state:serializeRoom()};
+  S.conns.forEach(c=>{ try{ c.send(payload); }catch(e){} });
+}
+function serializeRoom(){
+  return {
+    screen:S.screen, settings:S.settings, players:S.players, votes:S.votes,
+    usedIds:[...S.usedIds], round:S.round, totalRounds:S.totalRounds, card:S.card,
+    bid:S.bid, passed:[...S.passed], log:S.log, roundEndsAt:S.roundEndsAt,
+    awaitingAssign:S.awaitingAssign, wonCard:S.wonCard, gameOver:S.gameOver
+  };
+}
+function mergeIncomingState(room){
+  S.screen=room.screen; S.settings=room.settings; S.players=room.players; S.votes=room.votes;
+  S.usedIds=new Set(room.usedIds); S.round=room.round; S.totalRounds=room.totalRounds; S.card=room.card;
+  S.bid=room.bid; S.passed=new Set(room.passed); S.log=room.log; S.roundEndsAt=room.roundEndsAt;
+  S.awaitingAssign=room.awaitingAssign; S.wonCard=room.wonCard; S.gameOver=room.gameOver;
+  if(S.screen==="game" && !S._tick) startTicker(true);
+  if(S.gameOver) clearInterval(S._tick);
+}
+
+async function joinOnlineRoom(){
+  const name=(document.getElementById("joinName")?.value||S._joinName||"Player").trim()||"Player";
+  const code=(document.getElementById("joinCode")?.value||S._joinCode||"").trim().toUpperCase();
+  S._joinName=name; S._joinCode=code;
+  if(!code){ S.connectErr="Enter a room code."; render(); return; }
+  resetGameKeepMode();
+  S.mode="online"; S.isHost=false; S.roomCode=code;
+  S.connectErr=""; S.connectMsg="Connecting to room "+code+"…"; S.screen="connecting"; render();
+  teardownNetwork();
+  const peer = new Peer({ debug:0 });
+  S.peer = peer;
+  peer.on("open", ()=>{
+    const conn = peer.connect(peerIdFor(code), { reliable:true });
+    S.hostConn = conn;
+    let settled=false;
+    conn.on("open", ()=>{ conn.send({type:"join", name}); });
+    conn.on("data", data=>{
+      settled=true;
+      if(data.type==="welcome"){ S.myId=data.myId; }
+      else if(data.type==="state"){ mergeIncomingState(data.state); }
+      else if(data.type==="error"){ S.connectErr=data.message; S.screen="onlineMenu"; S._onlineKind="join"; teardownNetwork(); }
+      render();
+    });
+    conn.on("close", ()=>{ addLog("Lost connection to host."); render(); });
+    conn.on("error", ()=>{
+      if(!settled){ S.connectErr="Could not reach room "+code+". Check the code and that the host is still open."; S.screen="onlineMenu"; S._onlineKind="join"; render(); }
+    });
+    setTimeout(()=>{
+      if(!settled && S.screen==="connecting"){
+        S.connectErr="Room not found. Double check the code with your host.";
+        S.screen="onlineMenu"; S._onlineKind="join"; teardownNetwork(); render();
+      }
+    }, 9000);
+  });
+  peer.on("error", err=>{
+    S.connectErr="Connection error ("+err.type+"). Check your internet connection and try again.";
+    S.screen="onlineMenu"; S._onlineKind="join"; render();
+  });
+}
+
+/* ---- action dispatch: host executes directly, clients send to host ---- */
+function doAction(action, payload){
+  if(S.mode!=="online" || S.isHost){ execAction(action, payload); }
+  else if(S.hostConn){ try{ S.hostConn.send({type:"action", action, payload}); }catch(e){} }
+}
+function execAction(action, payload){
+  if(action==="bid") placeBidCore(payload.playerId, payload.amount);
+  else if(action==="takeit") takeItCore(payload.playerId);
+  else if(action==="assign") assignToSlotCore(payload.playerId, payload.slotIndex);
+  else if(action==="vote") castVoteCore(payload.cat, payload.key, payload.voterId);
+  afterStateChange();
+}
+function afterStateChange(){
+  if(S.mode==="online" && S.isHost) broadcastState();
+  render();
+}
+
+/* ---- lobby ---- */
+function screenLobby(){
+  const cap = S.settings.capacity||S.settings.humanCount||4;
+  const humans = S.players.filter(p=>!p.isBot);
+  return `
+  <h2>Lobby</h2>
+  <div class="row wrap" style="align-items:flex-start;">
+    <div style="flex:1;min-width:220px;">
+      <div class="room-code">${S.roomCode}</div>
+      <p class="hint" style="text-align:center;margin-top:8px;">Share this code — waiting for ${cap} player${cap>1?'s':''}.</p>
+    </div>
+    <div style="flex:2;min-width:260px;">
+      <div class="section-title">Players (${humans.length}/${cap})</div>
+      <div class="lobby-players">
+        ${S.players.map(p=>`
+          <div class="lobby-player">
+            <div class="row" style="align-items:center;gap:10px;">
+              <div class="avatar">${p.name[0].toUpperCase()}</div>
+              <div>${p.name}${p.id===S.myId?' <span class="pill">you</span>':''}${p.isBot?' <span class="pill">bot</span>':''}</div>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  </div>
+  ${S.isHost ? `
+    <div class="sep"></div>
+    <button class="btn btn-primary btn-block" ${humans.length<1?'disabled':''} onclick="hostStartVoting()">Start (open voting)</button>
+    <p class="hint" style="margin-top:8px;">You can start with bots filling empty seats — the room doesn't need to be full.</p>
+  ` : `<div class="notice">Waiting for the host to start the game…</div>`}
+  `;
+}
+function hostStartVoting(){
+  S.votes={type:{},mode:{}}; S.screen="voting"; afterStateChange();
+}
+
+/* ---- voting ---- */
+function screenVoting(){
+  const typeOptions=[
+    {k:"Legends only", d:"Only retired greats — Maldini, Pelé, Zidane and company."},
+    {k:"Current players", d:"Only active pros currently playing today."},
+    {k:"Mixed players", d:"Anyone can appear — legends and current stars together."}
+  ];
+  const modeOptions=[
+    {k:"Position Matter", d:"5 fixed slots: GK · DEF · MID · ST · ST. Wrong-position picks lose stats."},
+    {k:"Collection", d:"No slots — just collect the highest combined OVR and stats."}
+  ];
+  const myTypeVote = S.votes.type[S.myId];
+  const myModeVote = S.votes.mode[S.myId];
+  if(!S.settings.playerType){
+    return `
+    <h2>Vote: Player pool</h2>
+    <p class="hint">Everyone picks — majority wins.</p>
+    <div class="choice-grid" style="margin-top:14px;">
+      ${typeOptions.map(o=>`
+        <div class="vote-option" onclick="castVote('type','${o.k}')" style="${myTypeVote===o.k?'border-color:var(--pitch);':''}">
+          <h3>${o.k}</h3><p>${o.d}</p>
+          <div class="vote-tally">${voteDots('type',o.k)}</div>
+        </div>`).join("")}
+    </div>
+    ${voteWaitList('type')}`;
+  }
+  return `
+  <h2>Vote: Squad rule</h2>
+  <p class="hint">Everyone picks — majority wins.</p>
+  <div class="choice-grid" style="margin-top:14px;">
+    ${modeOptions.map(o=>`
+      <div class="vote-option" onclick="castVote('mode','${o.k}')" style="${myModeVote===o.k?'border-color:var(--pitch);':''}">
+        <h3>${o.k}</h3><p>${o.d}</p>
+        <div class="vote-tally">${voteDots('mode',o.k)}</div>
+      </div>`).join("")}
+  </div>
+  ${voteWaitList('mode')}`;
+}
+function voteDots(cat,key){ return Object.values(S.votes[cat]).filter(v=>v===key).map(()=>`<span class="dot"></span>`).join(""); }
+function voteWaitList(cat){
+  const votedCount = Object.keys(S.votes[cat]).length;
+  const humanCount = S.players.filter(p=>!p.isBot).length;
+  return `<div class="notice">${votedCount}/${humanCount} human players have voted (bots auto-vote).</div>`;
+}
+function castVote(cat,key){
+  if(S.mode==="offline"){
+    if(cat==="type"){ S.settings.playerType=key; render(); }
+    else { S.settings.ruleMode=key; finishVotingAndStart(); }
+    return;
+  }
+  doAction("vote", {cat, key, voterId:S.myId});
+}
+function castVoteCore(cat,key,voterId){
+  S.votes[cat][voterId]=key;
+  S.players.filter(p=>p.isBot).forEach(b=>{ if(!S.votes[cat][b.id]) S.votes[cat][b.id]=key; });
+  const humans = S.players.filter(p=>!p.isBot);
+  if(humans.every(p=>S.votes[cat][p.id])){
+    const tally={};
+    Object.values(S.votes[cat]).forEach(v=>tally[v]=(tally[v]||0)+1);
+    const winner = Object.entries(tally).sort((a,b)=>b[1]-a[1])[0][0];
+    if(cat==="type") S.settings.playerType=winner;
+    else { S.settings.ruleMode=winner; resetPlayersMoney(); beginRound(); S.screen="game"; startTicker(S.mode==="online"); }
+  }
+}
+function finishVotingAndStart(){
+  S.screen="game"; resetPlayersMoney(); beginRound(); startTicker(); render();
+}
+function resetPlayersMoney(){ S.players.forEach(p=>{ p.money=START_MONEY; p.slots=[null,null,null,null,null]; p.list=[]; }); }
+
+/* =========================================================================
+   AUCTION ENGINE (host-authoritative)
+   ========================================================================= */
+function pool(){
+  const t = S.settings.playerType;
+  if(t==="Legends only") return PLAYERS_DB.filter(p=>p.era==="Legend");
+  if(t==="Current players") return PLAYERS_DB.filter(p=>p.era==="Current");
+  return PLAYERS_DB;
+}
+function beginRound(){
+  S.round += 1;
+  if(S.round>S.totalRounds){ endGame(); return; }
+  const avail = pool().filter(p=>!S.usedIds.has(p.id));
+  const src = avail.length? avail : pool();
+  const base = shuffle(src)[0];
+  S.usedIds.add(base.id);
+  const isPrime = Math.random()<0.5;
+  const mult = isPrime?1.08:0.94;
+  const card = {
+    id:uid(), base, prime:isPrime,
+    pace:Math.min(99,Math.round(base.pace*mult)),
+    shoot:Math.min(99,Math.round(base.shoot*mult)),
+    pass:Math.min(99,Math.round(base.pass*mult)),
+    defend:Math.min(99,Math.round(base.defend*mult)),
+    phys:Math.min(99,Math.round(base.phys*mult)),
+  };
+  card.ovr = Math.round((card.pace+card.shoot+card.pass+card.defend+card.phys)/5);
+  S.card=card; S.bid={amount:0,byId:null}; S.passed=new Set();
+  S.awaitingAssign=null; S.wonCard=null;
+  S.roundEndsAt = Date.now()+ROUND_SECONDS*1000;
+  addLog(`Round ${S.round}: ${card.base.name} (${card.prime?'Prime':'Regular'}, ${card.base.pos}) enters the auction — OVR ${card.ovr}.`);
+}
+function activeBidders(){ return S.players.filter(p=>p.money>0 && !S.passed.has(p.id)); }
+function canAfford(p, amt){ return p.money>=amt; }
+function minNextBid(){ return S.bid.amount+1; }
+
+function placeBid(playerId, amount){ doAction("bid", {playerId, amount}); }
+function placeBidCore(playerId, amount){
+  const p = S.players.find(x=>x.id===playerId);
+  if(!p || S.awaitingAssign || !S.card) return;
+  amount = Math.floor(Number(amount));
+  if(!amount || amount<minNextBid() || amount>p.money) return;
+  S.bid = {amount, byId:playerId};
+  S.passed.delete(playerId);
+  addLog(`${p.name} bids ${fmt(amount)} for ${S.card.base.name}.`, p.id===S.myId);
+  maybeResolveRound();
+}
+function takeIt(playerId){ doAction("takeit", {playerId}); }
+function takeItCore(playerId){
+  const p = S.players.find(x=>x.id===playerId);
+  if(!p || S.awaitingAssign || !S.card) return;
+  S.passed.add(playerId);
+  addLog(`${p.name} takes it — passes on ${S.card.base.name}.`, p.id===S.myId);
+  maybeResolveRound();
+}
+function maybeResolveRound(){
+  if(!S.card || S.awaitingAssign) return;
+  const contenders = activeBidders().filter(p=>p.id!==S.bid.byId);
+  const remaining = contenders.filter(p=>canAfford(p, minNextBid()));
+  if(S.bid.byId && remaining.length===0){ awardCard(); return; }
+  if(Date.now()>=S.roundEndsAt){
+    if(S.bid.byId) awardCard();
+    else { addLog(`Time's up — nobody bid on ${S.card.base.name}. Moving on.`); proceedNext(); }
+  }
+}
+function awardCard(){
+  const winner = S.players.find(p=>p.id===S.bid.byId);
+  if(!winner) return;
+  winner.money -= S.bid.amount;
+  addLog(`${winner.name} wins ${S.card.base.name} for ${fmt(S.bid.amount)}!`, winner.id===S.myId);
+  if(S.settings.ruleMode==="Collection"){
+    winner.list.push({...S.card});
+    S.wonCard=null; S.awaitingAssign=null;
+    proceedNext();
+  } else {
+    S.wonCard = {...S.card};
+    S.awaitingAssign = winner.id;
+    if(winner.isBot) botAutoAssign(winner);
+  }
+}
+function proceedNext(){
+  if(S.players.every(p=>p.money<=0)){ endGame(); return; }
+  beginRound();
+}
+function assignToSlot(playerId, slotIndex){ doAction("assign", {playerId, slotIndex}); }
+function assignToSlotCore(winnerId, slotIndex){
+  if(S.awaitingAssign!==winnerId) return;
+  const p = S.players.find(x=>x.id===winnerId);
+  if(!p || !S.wonCard || p.slots[slotIndex]) return;
+  p.slots[slotIndex] = {...S.wonCard};
+  addLog(`${p.name} places ${S.wonCard.base.name} into ${SLOT_TEMPLATE[slotIndex]}.`);
+  S.wonCard=null; S.awaitingAssign=null;
+  proceedNext();
+}
+function botAutoAssign(bp){
+  const cat = catOf(S.wonCard.base.pos);
+  let idx = SLOT_TEMPLATE.findIndex((s,i)=>s===cat && !bp.slots[i]);
+  if(idx===-1) idx = bp.slots.findIndex(s=>!s);
+  if(idx!==-1) assignToSlotCore(bp.id, idx);
+}
+function endGame(){ S.gameOver=true; S.screen="result"; clearInterval(S._tick); }
+
+/* ---- bot brain (runs on the host only) ---- */
+function botAct(){
+  if(!S.card || S.awaitingAssign) return;
+  S.players.filter(p=>p.isBot && p.money>0 && !S.passed.has(p.id)).forEach(bot=>{
+    if(bot.id===S.bid.byId) return;
+    const willingness = Math.round(S.card.ovr*0.35 + Math.random()*8);
+    const next = minNextBid();
+    if(next<=bot.money && next<=willingness && Math.random()<0.6) placeBidCore(bot.id, next);
+    else if(Math.random()<0.5) takeItCore(bot.id);
+  });
+}
+function hostTick(){
+  if(S.gameOver) return;
+  botAct();
+  if(S.card && !S.awaitingAssign) maybeResolveRound();
+}
+function startTicker(isOnlineClient){
+  clearInterval(S._tick);
+  S._tick = setInterval(()=>{
+    if(S.gameOver){ clearInterval(S._tick); return; }
+    if(S.mode==="offline"){ botAct(); if(S.card && !S.awaitingAssign) maybeResolveRound(); render(); }
+    else if(S.isHost){ hostTick(); afterStateChange(); }
+    else { render(); } // client: just refresh the on-screen countdown
+  }, 1000);
+}
+
+/* =========================================================================
+   GAME SCREEN
+   ========================================================================= */
+function screenGame(){
+  if(!S.card && !S.gameOver) return `<div class="notice">Loading round…</div>`;
+  const secsLeft = Math.max(0, Math.round((S.roundEndsAt-Date.now())/1000));
+  const mm = String(Math.floor(secsLeft/60)).padStart(2,"0");
+  const ss = String(secsLeft%60).padStart(2,"0");
+  const low = secsLeft<=20;
+
+  let assignBanner="";
+  if(S.awaitingAssign){
+    const p = S.players.find(x=>x.id===S.awaitingAssign);
+    const mine = S.mode==="offline" ? true : (S.awaitingAssign===S.myId);
+    if(p && !p.isBot){
+      assignBanner = `
+      <div class="assign-banner">
+        <div>🏆 <strong>${p.name}</strong> won <strong>${S.wonCard.base.name}</strong> — place them in a slot.</div>
+        ${mine ? `<div class="row wrap">${SLOT_TEMPLATE.map((s,i)=>`<button class="btn btn-gold" onclick="assignToSlot('${p.id}',${i})" ${p.slots[i]?'disabled':''}>${s}${i===4?' (2)':''}</button>`).join("")}</div>` : `<div class="hint">Waiting for ${p.name} to place the card…</div>`}
+      </div>`;
+    }
+  }
+
+  return `
+  <div class="game-top">
+    <div><div class="label">Round</div><div class="val">${S.round} / ${S.totalRounds}</div></div>
+    <div><div class="label">Pool</div><div class="val" style="font-size:15px;">${S.settings.playerType}</div></div>
+    <div><div class="label">Rule</div><div class="val" style="font-size:15px;">${S.settings.ruleMode}</div></div>
+    <div><div class="label">Timer</div><div class="val timer-val ${low?'low':''}">${mm}:${ss}</div></div>
+  </div>
+  ${assignBanner}
+  ${S.card ? auctionCardHtml() : ""}
+  <div class="section-title">Squads</div>
+  <div class="players-grid">${S.players.map(p=>playerPanelHtml(p)).join("")}</div>
+  <div class="section-title">Live feed</div>
+  <div class="log-feed">${[...S.log].reverse().map(l=>`<div class="${l.mine?'me':''}">${l.msg}</div>`).join("")}</div>
+  `;
+}
+function auctionCardHtml(){
+  const c=S.card;
+  return `
+  <div class="auction-wrap">
+    <div class="pcard">
+      <div class="pcard-portrait">${portraitHtml(c.base.name)}</div>
+      <div class="pcard-info">
+        <h2>${c.base.name} ${c.prime?'<span class="prime-tag">PRIME</span>':'<span class="regular-tag">REGULAR</span>'}</h2>
+        <div class="meta">${c.base.pos} · ${c.base.nat} · ${c.base.club} · ${c.base.era}</div>
+        <div class="pcard-stats">
+          <div class="stat-chip"><div class="v">${c.pace}</div><div class="k">PAC</div></div>
+          <div class="stat-chip"><div class="v">${c.shoot}</div><div class="k">SHO</div></div>
+          <div class="stat-chip"><div class="v">${c.pass}</div><div class="k">PAS</div></div>
+          <div class="stat-chip"><div class="v">${c.defend}</div><div class="k">DEF</div></div>
+          <div class="stat-chip"><div class="v">${c.phys}</div><div class="k">PHY</div></div>
+        </div>
+      </div>
+      <div class="ovr-badge"><div class="v">${c.ovr}</div><div class="k">OVR</div></div>
+    </div>
+    <div class="bid-status">
+      ${S.bid.byId ? `<div class="amount">${fmt(S.bid.amount)}</div><div class="by">current high bid — ${S.players.find(p=>p.id===S.bid.byId)?.name}</div>`
+      : `<div class="amount" style="color:var(--muted);">No bids yet</div><div class="by">first bid opens the auction</div>`}
+    </div>
+  </div>`;
+}
+function playerPanelHtml(p){
+  const isLeader = S.bid.byId===p.id;
+  const isPassed = S.passed.has(p.id);
+  const controllable = S.mode==="offline" ? !p.isBot : (p.id===S.myId);
+  const draft = S.bidDraft[p.id] ?? minNextBid();
+  const canBid = controllable && !S.awaitingAssign && S.card && p.money>=minNextBid() && !isLeader && !isPassed;
+  const canPass = controllable && !S.awaitingAssign && S.card && !isLeader && !isPassed;
+
+  let body="";
+  if(S.settings.ruleMode==="Position Matter"){
+    body = `<div class="pp-slots">${p.slots.map((s,i)=>{
+      const wantCat = SLOT_TEMPLATE[i];
+      const mismatch = s && catOf(s.base.pos)!==wantCat;
+      return `<div class="slot ${s?'filled':''} ${mismatch?'mismatch':''}">
+        <div class="sname">${SLOT_TEMPLATE[i]}</div>
+        ${s? `<div class="slot-photo">${portraitHtml(s.base.name)}</div><div class="sname">${s.base.name.split(" ").slice(-1)[0]}</div><div class="sovr">${mismatch?Math.round(s.ovr*0.85):s.ovr}</div>` : '<div class="sovr">—</div>'}
+      </div>`;
+    }).join("")}</div>`;
+  } else {
+    body = p.list.length ? `<div class="pp-list">${p.list.map(c=>`<div class="list-chip"><span class="cp">${portraitHtml(c.base.name)}</span>${c.base.name} · ${c.ovr}</div>`).join("")}</div>`
+      : `<div class="hint">No players collected yet.</div>`;
+  }
+
+  return `
+  <div class="card-surface player-panel ${isLeader?'leader':''} ${isPassed?'passed':''}">
+    <div class="pp-head">
+      <div class="pp-name">${p.name}${p.isBot?' <span class="pill">bot</span>':''}${p.money<=0?' <span class="pill">broke</span>':''}${p.connected===false?' <span class="pill">left</span>':''}</div>
+      <div class="pp-money">${fmt(Math.max(0,p.money))}</div>
+    </div>
+    ${controllable && !p.isBot ? `
+    <div class="pp-bidrow">
+      <input class="field" type="number" min="${minNextBid()}" max="${p.money}" value="${draft}" oninput="S.bidDraft['${p.id}']=this.value" ${!canBid?'disabled':''}>
+      <button class="btn btn-gold" ${!canBid?'disabled':''} onclick="placeBid('${p.id}', S.bidDraft['${p.id}']||${minNextBid()})">Bid</button>
+      <button class="btn btn-red" ${!canPass?'disabled':''} onclick="takeIt('${p.id}')">Take it</button>
+    </div>` : ""}
+    ${body}
+  </div>`;
+}
+
+/* =========================================================================
+   RESULT
+   ========================================================================= */
+function scoreOf(p){
+  if(S.settings.ruleMode==="Collection") return p.list.reduce((sum,c)=>sum+c.ovr, 0);
+  return p.slots.reduce((sum,s,i)=>{
+    if(!s) return sum;
+    const mismatch = catOf(s.base.pos)!==SLOT_TEMPLATE[i];
+    return sum + (mismatch? Math.round(s.ovr*0.85) : s.ovr);
+  },0);
+}
+function screenResult(){
+  const ranked = [...S.players].sort((a,b)=>scoreOf(b)-scoreOf(a));
+  return `
+  <h2>Final result</h2>
+  <p class="hint">${S.settings.ruleMode==="Collection" ? "Total combined OVR across every player collected." : "Sum of your 5 starting-XI slots (mismatched positions scored at 85%)."}</p>
+  <div style="margin-top:16px;">
+    ${ranked.map((p,i)=>`
+      <div class="card-surface result-row ${i===0?'win':''}">
+        <div class="result-rank">${i+1}</div>
+        <div class="result-name">${p.name}${p.isBot?' <span class="pill">bot</span>':''}</div>
+        <div class="result-score">${scoreOf(p)}</div>
+      </div>`).join("")}
+  </div>
+  <div class="sep"></div>
+  <button class="btn btn-primary" onclick="goMenu()">Back to menu</button>
+  `;
+}
+
+render();
+</script>
+</body>
+<footer>
+  <center><h1>MADE BY EXO</h1></center>
+</footer>
+</html>
