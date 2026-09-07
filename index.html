@@ -157,6 +157,14 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-o
 .brand span{color:var(--gold);}
 .spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--gold);animation:sp 0.8s linear infinite;margin:0 auto 14px;}
 @keyframes sp{to{transform:rotate(360deg);}}
+
+/* --- Added: chat panel & player-browser styles --- */
+.chat-box{display:flex;flex-direction:column;background:var(--bg-alt);border:1px solid var(--line);border-radius:10px;padding:12px 14px;max-height:220px;overflow-y:auto;font-size:13.5px;}
+.chat-box .chat-msg{padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03);line-height:1.4;word-break:break-word;}
+.chat-box .chat-msg .who{color:var(--gold);font-weight:700;margin-right:6px;}
+.chat-box .chat-msg.mine .who{color:var(--pitch);}
+.chat-empty{color:var(--muted-2);font-size:13px;padding:6px 0;}
+.browse-search-wrap{position:relative;margin:14px 0;}
 </style>
 </head>
 <body>
@@ -204,7 +212,6 @@ const PLAYERS_DB = [
  {name:"Alphonso Davies", pos:"DEF", nat:"Canada", club:"Bayern Munich", era:"Current", pace:97,shoot:60,pass:74,defend:79,phys:74},
  {name:"Alisson Becker", pos:"GK", nat:"Brazil", club:"Liverpool", era:"Current", pace:58,shoot:14,pass:72,defend:87,phys:83},
  {name:"Thibaut Courtois", pos:"GK", nat:"Belgium", club:"Real Madrid", era:"Current", pace:52,shoot:12,pass:68,defend:89,phys:88},
- {name:"Manuel Neuer", pos:"GK", nat:"Germany", club:"Bayern Munich", era:"Current", pace:55,shoot:15,pass:70,defend:88,phys:85},
 ].map((p,i)=>({...p,id:"p"+i, ovr:Math.round((p.pace+p.shoot+p.pass+p.defend+p.phys)/5)}));
 
 const BOT_NAMES = ["Bot Nacho","Bot Zico","Bot Kova","Bot Dembo","Bot Rilla"];
@@ -219,6 +226,7 @@ function uid(){ return Math.random().toString(36).slice(2,9); }
 function shuffle(a){ a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 function fmt(n){ return "$"+n; }
 function initials(name){ return name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase(); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* =========================================================================
    PLAYER PHOTOS — live lookup from Wikipedia's public summary API, cached.
@@ -270,6 +278,10 @@ let S = {
   gameOver:false,
   bidDraft:{},
   connectMsg:"", connectErr:"",
+  chat:[],
+  chatAsId:null,
+  _prevScreen:null,
+  _playerSearch:"",
   _tick:null
 };
 
@@ -298,9 +310,12 @@ function render(){
     case "voting": html = screenVoting(); break;
     case "game": html = screenGame(); break;
     case "result": html = screenResult(); break;
+    case "browsePlayers": html = screenBrowsePlayers(); break;
     default: html = screenMenu();
   }
   app.innerHTML = topBar() + html;
+  const chatFeedEl = document.getElementById("chatFeedBox");
+  if(chatFeedEl) chatFeedEl.scrollTop = chatFeedEl.scrollHeight;
 }
 function topBar(){
   if(S.screen==="menu") return "";
@@ -310,6 +325,7 @@ function goMenu(){
   clearInterval(S._tick);
   teardownNetwork();
   S.screen="menu"; S.mode=null; S.isHost=false; S.roomCode=null; S.myId=null;
+  S.chat=[]; S.chatAsId=null;
   resetGameKeepMode(); render();
 }
 function teardownNetwork(){
@@ -344,8 +360,125 @@ function screenMenu(){
       <button class="btn btn-gold btn-block" onclick="goOfflineSetup()">Offline / vs Bot</button>
     </div>
   </div>
+  <div class="card-surface mode-card" style="margin-top:16px;">
+    <h2>🔎 Check players</h2>
+    <p>Browse every footballer in the auction pool — legends and current stars — and search by name, position, club, nationality or era before you play.</p>
+    <button class="btn btn-block" onclick="goBrowsePlayers()">Open player list</button>
+  </div>
   <div class="notice">Online play needs an internet connection on both ends (it uses WebRTC, no account or server needed). If a connection ever fails, just re-create the room and share the new code.</div>
   `;
+}
+
+/* =========================================================================
+   CHECK PLAYERS (browse & search) — new feature
+   ========================================================================= */
+function goBrowsePlayers(){
+  S._prevScreen = S.screen;
+  S._playerSearch = "";
+  S.screen = "browsePlayers";
+  render();
+}
+function setPlayerSearch(v){ S._playerSearch = v; render(); }
+function screenBrowsePlayers(){
+  const q = (S._playerSearch||"").trim().toLowerCase();
+  const list = PLAYERS_DB.filter(p=>{
+    if(!q) return true;
+    return p.name.toLowerCase().includes(q)
+      || p.pos.toLowerCase().includes(q)
+      || p.nat.toLowerCase().includes(q)
+      || p.club.toLowerCase().includes(q)
+      || p.era.toLowerCase().includes(q);
+  }).sort((a,b)=>b.ovr-a.ovr);
+  return `
+  <h2>Check players</h2>
+  <p class="hint">Every footballer that can appear in the auction pool. Search by name, position (GK/DEF/MID/ST), club, nationality, or era (Legend/Current).</p>
+  <div class="browse-search-wrap">
+    <input class="field" id="playerSearchInput" placeholder="Search e.g. 'Messi', 'DEF', 'Brazil', 'Legend'…" value="${escapeHtml(S._playerSearch||"")}" oninput="setPlayerSearch(this.value)" autocomplete="off">
+  </div>
+  <div class="hint" style="margin-bottom:12px;">${list.length} player${list.length===1?"":"s"} found${q?` for "${escapeHtml(S._playerSearch)}"`:""}</div>
+  <div class="players-grid">
+    ${list.map(p=>`
+      <div class="card-surface player-panel">
+        <div class="row" style="align-items:center;gap:12px;">
+          <div class="pcard-portrait" style="width:56px;height:56px;font-size:19px;flex-shrink:0;">${portraitHtml(p.name)}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="pp-name">${escapeHtml(p.name)}</div>
+            <div class="hint">${p.pos} · ${escapeHtml(p.nat)} · ${escapeHtml(p.club)}</div>
+            <div class="hint">${p.era==="Legend" ? '<span class="pill">Legend</span>' : '<span class="pill">Current</span>'}</div>
+          </div>
+          <div class="ovr-badge"><div class="v">${p.ovr}</div><div class="k">OVR</div></div>
+        </div>
+        <div class="pcard-stats" style="margin-top:12px;justify-content:space-between;">
+          <div class="stat-chip"><div class="v">${p.pace}</div><div class="k">PAC</div></div>
+          <div class="stat-chip"><div class="v">${p.shoot}</div><div class="k">SHO</div></div>
+          <div class="stat-chip"><div class="v">${p.pass}</div><div class="k">PAS</div></div>
+          <div class="stat-chip"><div class="v">${p.defend}</div><div class="k">DEF</div></div>
+          <div class="stat-chip"><div class="v">${p.phys}</div><div class="k">PHY</div></div>
+        </div>
+      </div>
+    `).join("") || `<div class="notice">No players match your search.</div>`}
+  </div>
+  <div class="sep"></div>
+  <button class="btn btn-primary" onclick="goMenu()">Back to menu</button>
+  `;
+}
+
+/* =========================================================================
+   IN-GAME LIVE CHAT — new feature
+   ========================================================================= */
+function chatPanelHtml(){
+  const showAsPicker = S.mode==="offline";
+  const humans = S.players.filter(p=>!p.isBot);
+  if(showAsPicker && !S.chatAsId && humans[0]) S.chatAsId = humans[0].id;
+  return `
+  <div class="section-title" style="margin-top:18px;">Live chat</div>
+  <div class="card-surface" style="padding:12px 14px;">
+    <div class="chat-box" id="chatFeedBox">
+      ${S.chat.length ? S.chat.map(m=>`
+        <div class="chat-msg ${m.senderId===S.myId ? 'mine':''}">
+          <span class="who">${escapeHtml(m.senderName)}:</span>${escapeHtml(m.text)}
+        </div>`).join("") : `<div class="chat-empty">No messages yet — say hi to the table.</div>`}
+    </div>
+    <div class="row wrap" style="margin-top:10px;gap:8px;">
+      ${showAsPicker ? `
+        <select class="field" style="max-width:140px;flex:none;" onchange="S.chatAsId=this.value">
+          ${humans.map(p=>`<option value="${p.id}" ${S.chatAsId===p.id?"selected":""}>${escapeHtml(p.name)}</option>`).join("")}
+        </select>` : ``}
+      <input class="field" id="chatInputBox" placeholder="Type a message…" style="flex:1;min-width:120px;" onkeydown="if(event.key==='Enter'){sendChatMessage();}">
+      <button class="btn btn-gold" onclick="sendChatMessage()">Send</button>
+    </div>
+  </div>`;
+}
+function sendChatMessage(){
+  const inp = document.getElementById("chatInputBox");
+  if(!inp) return;
+  const text = inp.value.trim();
+  if(!text) return;
+  inp.value="";
+  let senderId, senderName;
+  if(S.mode==="offline"){
+    senderId = S.chatAsId || (S.players.find(p=>!p.isBot)||{}).id;
+    const p = S.players.find(x=>x.id===senderId);
+    senderName = p ? p.name : "Player";
+  } else {
+    senderId = S.myId;
+    const p = S.players.find(x=>x.id===senderId);
+    senderName = p ? p.name : "You";
+  }
+  if(!senderId) return;
+  doAction("chat", {senderId, senderName, text});
+  const box = document.getElementById("chatInputBox");
+  if(box) box.focus();
+}
+function chatCore(payload){
+  S.chat.push({
+    id:uid(),
+    senderId:payload.senderId,
+    senderName:String(payload.senderName||"Player").slice(0,24),
+    text:String(payload.text||"").slice(0,300),
+    ts:Date.now()
+  });
+  if(S.chat.length>200) S.chat.shift();
 }
 
 /* =========================================================================
@@ -381,9 +514,11 @@ function setOfflineVsBot(){ S.settings.humanCount=1; S.settings._vsBot=true; S.s
 function setOfflineField(k,v){ S.settings[k]=v; render(); }
 function startOfflineGame(){
   resetGameKeepMode();
+  S.chat=[];
   const s=S.settings;
   for(let i=0;i<s.humanCount;i++) S.players.push(makePlayer("Player "+(i+1),false));
   for(let i=0;i<s.botCount;i++) S.players.push(makePlayer(BOT_NAMES[i%BOT_NAMES.length],true));
+  S.chatAsId = (S.players.find(p=>!p.isBot)||{}).id || null;
   beginRound();
   S.screen="game";
   startTicker();
@@ -448,6 +583,7 @@ async function createOnlineRoom(){
   const name=(document.getElementById("hostName")?.value||S._hostName||"Host").trim()||"Host";
   S._hostName=name;
   resetGameKeepMode();
+  S.chat=[];
   S.mode="online"; S.isHost=true; S.conns=[]; S.connMap=new Map();
   const me=makePlayer(name,false);
   S.myId=me.id; S.players=[me];
@@ -508,7 +644,8 @@ function serializeRoom(){
     screen:S.screen, settings:S.settings, players:S.players, votes:S.votes,
     usedIds:[...S.usedIds], round:S.round, totalRounds:S.totalRounds, card:S.card,
     bid:S.bid, passed:[...S.passed], log:S.log, roundEndsAt:S.roundEndsAt,
-    awaitingAssign:S.awaitingAssign, wonCard:S.wonCard, gameOver:S.gameOver
+    awaitingAssign:S.awaitingAssign, wonCard:S.wonCard, gameOver:S.gameOver,
+    chat:S.chat
   };
 }
 function mergeIncomingState(room){
@@ -516,6 +653,7 @@ function mergeIncomingState(room){
   S.usedIds=new Set(room.usedIds); S.round=room.round; S.totalRounds=room.totalRounds; S.card=room.card;
   S.bid=room.bid; S.passed=new Set(room.passed); S.log=room.log; S.roundEndsAt=room.roundEndsAt;
   S.awaitingAssign=room.awaitingAssign; S.wonCard=room.wonCard; S.gameOver=room.gameOver;
+  S.chat = room.chat || [];
   if(S.screen==="game" && !S._tick) startTicker(true);
   if(S.gameOver) clearInterval(S._tick);
 }
@@ -570,6 +708,7 @@ function execAction(action, payload){
   else if(action==="takeit") takeItCore(payload.playerId);
   else if(action==="assign") assignToSlotCore(payload.playerId, payload.slotIndex);
   else if(action==="vote") castVoteCore(payload.cat, payload.key, payload.voterId);
+  else if(action==="chat") chatCore(payload);
   afterStateChange();
 }
 function afterStateChange(){
@@ -607,6 +746,7 @@ function screenLobby(){
     <button class="btn btn-primary btn-block" ${humans.length<1?'disabled':''} onclick="hostStartVoting()">Start (open voting)</button>
     <p class="hint" style="margin-top:8px;">You can start with bots filling empty seats — the room doesn't need to be full.</p>
   ` : `<div class="notice">Waiting for the host to start the game…</div>`}
+  ${S.mode==="online" ? chatPanelHtml() : ""}
   `;
 }
 function hostStartVoting(){
@@ -637,7 +777,8 @@ function screenVoting(){
           <div class="vote-tally">${voteDots('type',o.k)}</div>
         </div>`).join("")}
     </div>
-    ${voteWaitList('type')}`;
+    ${voteWaitList('type')}
+    ${S.mode==="online" ? chatPanelHtml() : ""}`;
   }
   return `
   <h2>Vote: Squad rule</h2>
@@ -649,7 +790,8 @@ function screenVoting(){
         <div class="vote-tally">${voteDots('mode',o.k)}</div>
       </div>`).join("")}
   </div>
-  ${voteWaitList('mode')}`;
+  ${voteWaitList('mode')}
+  ${S.mode==="online" ? chatPanelHtml() : ""}`;
 }
 function voteDots(cat,key){ return Object.values(S.votes[cat]).filter(v=>v===key).map(()=>`<span class="dot"></span>`).join(""); }
 function voteWaitList(cat){
@@ -846,6 +988,7 @@ function screenGame(){
   <div class="players-grid">${S.players.map(p=>playerPanelHtml(p)).join("")}</div>
   <div class="section-title">Live feed</div>
   <div class="log-feed">${[...S.log].reverse().map(l=>`<div class="${l.mine?'me':''}">${l.msg}</div>`).join("")}</div>
+  ${chatPanelHtml()}
   `;
 }
 function auctionCardHtml(){
@@ -948,4 +1091,3 @@ render();
   <center><h1>MADE BY EXO</h1></center>
 </footer>
 </html>
-
