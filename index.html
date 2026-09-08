@@ -365,7 +365,8 @@ let S = {
   chatAsId:null,
   _prevScreen:null,
   _playerSearch:"",
-  _tick:null
+  _tick:null,
+  _dirty:false
 };
 
 function resetGameKeepMode(){
@@ -373,7 +374,7 @@ function resetGameKeepMode(){
   S.bid={amount:0,byId:null}; S.passed=new Set(); S.log=[]; S.roundEndsAt=0;
   S.awaitingAssign=null; S.wonCard=null; S.gameOver=false; S.bidDraft={};
 }
-function addLog(msg, mine){ S.log.push({msg, mine:!!mine}); if(S.log.length>60) S.log.shift(); }
+function addLog(msg, mine){ S.log.push({msg, mine:!!mine}); if(S.log.length>60) S.log.shift(); S._dirty=true; }
 function makePlayer(name,isBot){
   return { id:uid(), name, isBot:!!isBot, money:START_MONEY, slots:[null,null,null,null,null], list:[], connected:true };
 }
@@ -620,6 +621,7 @@ function chatCore(payload){
     ts:Date.now()
   });
   if(S.chat.length>200) S.chat.shift();
+  S._dirty=true;
 }
 
 /* =========================================================================
@@ -1083,13 +1085,43 @@ function hostTick(){
   botAct();
   if(S.card && !S.awaitingAssign) maybeResolveRound();
 }
+// Patches just the countdown text/color in place, without touching the rest
+// of the DOM. This is what runs on every 1-second tick when nothing else
+// changed, so the chat box (and any input the user is mid-interaction with,
+// like scrolling) is never destroyed and rebuilt just to update a clock.
+function refreshTimerDisplay(){
+  if(S.screen!=="game" || !S.card) return;
+  const el = document.getElementById("timerDisplay");
+  if(!el) return;
+  const secsLeft = Math.max(0, Math.round((S.roundEndsAt-Date.now())/1000));
+  const mm = String(Math.floor(secsLeft/60)).padStart(2,"0");
+  const ss = String(secsLeft%60).padStart(2,"0");
+  el.textContent = mm+":"+ss;
+  el.classList.toggle("low", secsLeft<=20);
+}
 function startTicker(isOnlineClient){
   clearInterval(S._tick);
   S._tick = setInterval(()=>{
     if(S.gameOver){ clearInterval(S._tick); return; }
-    if(S.mode==="offline"){ botAct(); if(S.card && !S.awaitingAssign) maybeResolveRound(); render(); }
-    else if(S.isHost){ hostTick(); afterStateChange(); }
-    else { render(); } // client: just refresh the on-screen countdown
+    if(S.mode==="offline"){
+      S._dirty=false;
+      botAct();
+      if(S.card && !S.awaitingAssign) maybeResolveRound();
+      if(S._dirty) render(); else refreshTimerDisplay();
+    }
+    else if(S.isHost){
+      S._dirty=false;
+      hostTick();
+      if(S._dirty){ broadcastState(); render(); } else { refreshTimerDisplay(); }
+    }
+    else {
+      // Client: the countdown is derived from S.roundEndsAt, which we already
+      // have from the last real state broadcast, so it can tick locally
+      // every second without needing a message from the host or a full
+      // re-render — that's what was destroying the chat box under the
+      // user's finger every second on the joining player's screen too.
+      refreshTimerDisplay();
+    }
   }, 1000);
 }
 
@@ -1121,7 +1153,7 @@ function screenGame(){
     <div><div class="label">Round</div><div class="val">${S.round} / ${S.totalRounds}</div></div>
     <div><div class="label">Pool</div><div class="val" style="font-size:15px;">${S.settings.playerType}</div></div>
     <div><div class="label">Rule</div><div class="val" style="font-size:15px;">${S.settings.ruleMode}</div></div>
-    <div><div class="label">Timer</div><div class="val timer-val ${low?'low':''}">${mm}:${ss}</div></div>
+    <div><div class="label">Timer</div><div class="val timer-val ${low?'low':''}" id="timerDisplay">${mm}:${ss}</div></div>
   </div>
   ${assignBanner}
   ${S.card ? auctionCardHtml() : ""}
