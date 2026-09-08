@@ -137,7 +137,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-o
 .list-chip .cp{width:18px;height:18px;border-radius:50%;overflow:hidden;background:var(--pitch-dim);flex-shrink:0;}
 .list-chip .cp img{width:100%;height:100%;object-fit:cover;}
 
-.log-feed{background:var(--bg-alt);border:1px solid var(--line);border-radius:10px;padding:12px 16px;max-height:150px;overflow-y:auto;font-size:13px;color:var(--muted);display:flex;flex-direction:column-reverse;}
+.log-feed{background:var(--bg-alt);border:1px solid var(--line);border-radius:10px;padding:12px 16px;max-height:150px;overflow-y:auto;font-size:13px;color:var(--muted);display:flex;flex-direction:column-reverse;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
 .log-feed div{padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03);}
 .log-feed .me{color:var(--gold);}
 
@@ -159,12 +159,95 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-o
 @keyframes sp{to{transform:rotate(360deg);}}
 
 /* --- Added: chat panel & player-browser styles --- */
-.chat-box{display:flex;flex-direction:column;background:var(--bg-alt);border:1px solid var(--line);border-radius:10px;padding:12px 14px;max-height:220px;overflow-y:auto;font-size:13.5px;}
+.chat-box{display:flex;flex-direction:column;background:var(--bg-alt);border:1px solid var(--line);border-radius:10px;padding:12px 14px;max-height:220px;overflow-y:auto;font-size:13.5px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
 .chat-box .chat-msg{padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03);line-height:1.4;word-break:break-word;}
 .chat-box .chat-msg .who{color:var(--gold);font-weight:700;margin-right:6px;}
 .chat-box .chat-msg.mine .who{color:var(--pitch);}
 .chat-empty{color:var(--muted-2);font-size:13px;padding:6px 0;}
 .browse-search-wrap{position:relative;margin:14px 0;}
+
+/* =========================================================================
+   MOBILE RESPONSIVE — tighter spacing, stacked layouts, bigger touch targets
+   ========================================================================= */
+@media (max-width:720px){
+  #app{padding:14px 10px 40px;}
+  .hero{padding:28px 4px 18px;}
+  .hero .kicker{font-size:11px;}
+  .hero h1{font-size:clamp(26px,8.5vw,38px);}
+  .hero p{font-size:13.5px;}
+
+  .menu-grid{gap:10px;margin-top:22px;}
+  .mode-card{padding:18px 16px;}
+  .mode-card h2{font-size:19px;}
+  .mode-card p{font-size:13px;}
+
+  .topbar-nav{margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+  .brand{font-size:16px;}
+  .topbar-nav .btn{padding:8px 12px;font-size:12.5px;}
+
+  h2{font-size:20px;}
+
+  .choice-grid{grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px;}
+  .choice{padding:12px 6px;}
+  .choice .n{font-size:20px;}
+  .choice .l{font-size:11px;}
+
+  .room-code{font-size:26px;letter-spacing:.06em;padding:12px 10px;}
+
+  .lobby-player{padding:9px 12px;}
+
+  .vote-option{padding:14px;}
+  .vote-option h3{font-size:15px;}
+  .vote-option p{font-size:12.5px;}
+
+  .game-top{padding:10px 12px;gap:6px 14px;}
+  .game-top .label{font-size:9.5px;}
+  .game-top .val{font-size:16px;}
+
+  .auction-wrap{padding:14px;border-radius:10px;margin-bottom:14px;}
+  .pcard{flex-direction:column;text-align:center;gap:10px;}
+  .pcard-portrait{width:72px;height:72px;font-size:24px;border-width:2px;}
+  .pcard-info h2{font-size:19px;}
+  .pcard-info .meta{font-size:12px;}
+  .pcard-stats{justify-content:center;gap:10px;row-gap:6px;}
+  .stat-chip .v{font-size:16px;}
+  .ovr-badge{min-width:52px;padding:6px 10px;}
+  .ovr-badge .v{font-size:21px;}
+  .bid-status{margin-top:16px;}
+  .bid-status .amount{font-size:30px;}
+
+  .players-grid{grid-template-columns:1fr;gap:10px;margin-bottom:14px;}
+  .player-panel{padding:12px;}
+  .pp-name{font-size:14px;}
+  .pp-money{font-size:17px;}
+  .pp-bidrow{flex-wrap:wrap;}
+  .pp-bidrow input{width:0;flex:1 1 70px;min-width:60px;font-size:14px;padding:10px;}
+  .pp-bidrow .btn{flex:1 1 auto;padding:10px 12px;font-size:13px;white-space:nowrap;}
+  .slot{min-width:42px;min-height:58px;padding:4px 2px;}
+  .slot .sname{font-size:9px;}
+  .slot .sovr{font-size:13px;}
+
+  .log-feed{font-size:12px;max-height:110px;padding:10px 12px;}
+  .assign-banner{padding:12px 14px;font-size:13.5px;}
+  .assign-banner .btn{padding:9px 10px;font-size:12.5px;}
+
+  .chat-box{max-height:170px;font-size:12.5px;padding:10px 12px;}
+  .chat-box .chat-msg{padding:4px 0;}
+
+  .result-row{padding:12px;gap:10px;}
+  .result-rank{font-size:22px;width:26px;}
+  .result-name{font-size:14px;}
+  .result-score{font-size:20px;}
+
+  .btn{padding:11px 14px;font-size:13.5px;}
+  .field{font-size:14px;padding:10px 11px;}
+}
+
+@media (max-width:400px){
+  .choice-grid{grid-template-columns:repeat(2,1fr);}
+  .pcard-stats{gap:8px;}
+  .players-grid{gap:8px;}
+}
 </style>
 </head>
 <body>
@@ -317,6 +400,21 @@ function render(){
     }
   }catch(e){ focusSnapshot = null; }
 
+  // --- Preserve chat scroll position across re-renders ---
+  // The game ticker calls render() once a second, which rebuilds the chat
+  // feed from scratch. Previously this always forced scrollTop to the
+  // bottom, which meant scrolling up to read older messages was pointless —
+  // the very next tick would yank you back down. Now we only auto-stick to
+  // the bottom if the user was already near the bottom (normal "follow the
+  // conversation" behavior); if they've scrolled up, we leave them where
+  // they are.
+  const chatFeedElBefore = document.getElementById("chatFeedBox");
+  let chatScrollSnapshot = null;
+  if(chatFeedElBefore){
+    const distanceFromBottom = chatFeedElBefore.scrollHeight - chatFeedElBefore.scrollTop - chatFeedElBefore.clientHeight;
+    chatScrollSnapshot = { wasNearBottom: distanceFromBottom < 40, scrollTop: chatFeedElBefore.scrollTop };
+  }
+
   let html = "";
   switch(S.screen){
     case "menu": html = screenMenu(); break;
@@ -350,8 +448,15 @@ function render(){
     }catch(e){}
   }
 
+  // --- Restore chat scroll position (see snapshot note above) ---
   const chatFeedEl = document.getElementById("chatFeedBox");
-  if(chatFeedEl) chatFeedEl.scrollTop = chatFeedEl.scrollHeight;
+  if(chatFeedEl){
+    if(!chatScrollSnapshot || chatScrollSnapshot.wasNearBottom){
+      chatFeedEl.scrollTop = chatFeedEl.scrollHeight;
+    } else {
+      chatFeedEl.scrollTop = chatScrollSnapshot.scrollTop;
+    }
+  }
 }
 function topBar(){
   if(S.screen==="menu") return "";
