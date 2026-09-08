@@ -1424,6 +1424,8 @@ function screenLobby(){
   `;
 }
 function hostStartVoting(){
+  S.settings.playerType = null;
+  S.settings.ruleMode = null;
   S.votes={type:{},mode:{}}; S.screen="voting"; afterStateChange();
 }
 
