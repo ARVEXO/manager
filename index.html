@@ -79,7 +79,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-o
 .lobby-players{display:flex;flex-direction:column;gap:8px;margin:14px 0;}
 .lobby-player{display:flex;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;}
 .avatar{width:30px;height:30px;border-radius:50%;background:var(--pitch-dim);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;overflow:hidden;flex-shrink:0;}
-.avatar img{width:100%;height:100%;object-fit:cover;}
+.avatar img{width:100%;height:100%;object-fit:cover;object-position:center 15%;}
 .room-code{font-family:'Oswald';font-size:38px;letter-spacing:.12em;color:var(--gold);background:var(--bg-alt);border:1px dashed var(--gold-dim);border-radius:8px;padding:14px 20px;text-align:center;}
 
 .vote-option{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;cursor:pointer;transition:border-color .15s;}
@@ -110,6 +110,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-o
 .ovr-badge .k{font-size:10px;letter-spacing:.05em;}
 .prime-tag{background:var(--red);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:100px;margin-left:6px;letter-spacing:.03em;}
 .regular-tag{background:var(--muted-2);color:#0E1613;font-size:11px;font-weight:700;padding:3px 8px;border-radius:100px;margin-left:6px;letter-spacing:.03em;}
+.legend-tag{background:var(--gold);color:#241B04;font-size:11px;font-weight:700;padding:3px 8px;border-radius:100px;margin-left:6px;letter-spacing:.03em;}
 
 .bid-status{margin-top:22px;text-align:center;}
 .bid-status .amount{font-family:'Oswald';font-size:44px;color:var(--gold);}
@@ -560,23 +561,85 @@ const PLAYERS_DB = [
 ].map((p,i)=>({...p,id:"p"+i, ovr:Math.round((p.pace+p.shoot+p.pass+p.defend+p.phys)/5)}));
 
 /* =========================================================================
-   FC-STYLE OVR SCALE
-   The raw 0-99 averages above are kept purely for internal math (relative
-   quality, scaling, GK "who's better than who" comparisons). Every OVR the
-   user actually SEES is remapped into a 114-127 "special card" band, the
-   way boosted Icon/Prime cards are rated — never a plain small number.
-   Prime cards land in the top half of the band, Regular cards the bottom
-   half, so Prime is always a genuine upgrade over Regular for the same guy.
+   GOALKEEPER ATTRIBUTES
+   Goalkeepers are rated on real GK attributes — diving, handling, kicking,
+   reflexes and speed off the line — never on outfield stats like shooting
+   or dribbling. Derived once here from each keeper's underlying numbers.
    ========================================================================= */
-const FC_OVR_MIN = 114;
-const FC_OVR_MAX = 127;
+PLAYERS_DB.forEach(p=>{
+  if(p.pos==="GK"){
+    p.gk = {
+      div:  p.defend,
+      han:  Math.round(p.defend*0.6 + p.phys*0.4),
+      kick: p.pass,
+      ref:  Math.round(p.defend*0.7 + p.pace*0.3),
+      spd:  p.pace
+    };
+  }
+});
+
+/* =========================================================================
+   FC-STYLE OVR SCALE (rebuilt)
+   - Legends never get a Prime/Regular split — a legend card IS the peak
+     version already, so every legend simply carries one true rating,
+     banded 124-130. Nobody is a legend below 124.
+   - Current players keep the Prime/Regular split: Regular sits 114-120,
+     Prime sits 118-124 — using the SAME relative quality score for a
+     player, so that player's Prime card is always a genuine upgrade over
+     their own Regular card, and only the true top tier (Haaland, Mbappe,
+     etc.) actually reaches the top of the band.
+   - Goalkeepers are judged purely on GK attributes, but placed on the
+     exact same bands as outfield players of their era — a great keeper
+     rates like a great outfielder, never lower just for being a GK.
+   - A short list of explicitly named all-time greats is pinned to a fixed
+     number instead of the formula, because history already settled these.
+   ========================================================================= */
+const FC_OVR_MIN = 114;        // kept for backward compatibility elsewhere
+const FC_OVR_MAX = 130;
+const LEGEND_MIN = 124, LEGEND_MAX = 130;
+const CURRENT_REG_MIN = 114, CURRENT_REG_MAX = 120;
+const CURRENT_PRIME_MIN = 118, CURRENT_PRIME_MAX = 124;
+
+const OVR_OVERRIDES = {
+  "Pele": 130,
+  "Diego Maradona": 130,
+  "Ronaldo Nazario": 130,
+  "Lionel Messi": 128,
+  "Lev Yashin": 130,
+  "Gianluigi Buffon": 128,
+  "Manuel Neuer": 127
+};
+
+function qualityRaw(p){
+  return p.pos==="GK"
+    ? (p.gk.div+p.gk.han+p.gk.kick+p.gk.ref+p.gk.spd)/5
+    : (p.pace+p.shoot+p.pass+p.defend+p.phys)/5;
+}
+function bandGroup(list, lo, hi){
+  const raws = list.map(qualityRaw);
+  const mn = Math.min(...raws), mx = Math.max(...raws);
+  list.forEach(p=>{
+    const t = mx>mn ? (qualityRaw(p)-mn)/(mx-mn) : 1;
+    p._t = t;
+    p.fcOvr = Math.round(lo + t*(hi-lo));
+  });
+}
 (function applyFcOvrScale(){
-  const raws = PLAYERS_DB.map(p=>p.ovr);
-  const rawMin = Math.min(...raws);
-  const rawMax = Math.max(...raws);
+  bandGroup(PLAYERS_DB.filter(p=>p.era==="Legend"), LEGEND_MIN, LEGEND_MAX);
+  bandGroup(PLAYERS_DB.filter(p=>p.era!=="Legend"), CURRENT_REG_MIN, CURRENT_REG_MAX);
+  // Prime OVR (current players only) reuses the same relative quality (_t)
+  // but mapped onto the higher Prime band, so Prime >= Regular always.
   PLAYERS_DB.forEach(p=>{
-    const t = rawMax>rawMin ? (p.ovr-rawMin)/(rawMax-rawMin) : 1;
-    p.fcOvr = Math.round(FC_OVR_MIN + t*(FC_OVR_MAX-FC_OVR_MIN));
+    if(p.era!=="Legend"){
+      p.fcOvrPrime = Math.round(CURRENT_PRIME_MIN + p._t*(CURRENT_PRIME_MAX-CURRENT_PRIME_MIN));
+    }
+  });
+  // Explicit named overrides win over the formula.
+  PLAYERS_DB.forEach(p=>{
+    if(OVR_OVERRIDES[p.name]!==undefined){
+      p.fcOvr = OVR_OVERRIDES[p.name];
+      if(p.era!=="Legend") p.fcOvrPrime = OVR_OVERRIDES[p.name];
+    }
   });
 })();
 
@@ -595,17 +658,27 @@ function initials(name){ return name.split(" ").map(w=>w[0]).slice(0,2).join("")
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* =========================================================================
-   PLAYER PHOTOS — live lookup from Wikipedia's public summary API, cached.
+   PLAYER PHOTOS — live lookup from Wikipedia's public API, cached.
+   Requests a larger thumbnail (sharper crop, less likely to be cut oddly)
+   and falls back cleanly to initials if a photo is missing or fails to
+   load, instead of showing a broken image icon.
    ========================================================================= */
 const PHOTO_CACHE = {};
 async function ensurePhoto(name){
   if(PHOTO_CACHE[name]!==undefined) return;
   PHOTO_CACHE[name]=null;
   try{
-    const resp = await fetch("https://en.wikipedia.org/api/rest_v1/page/summary/"+encodeURIComponent(name.replace(/ /g,"_")));
+    const url = "https://en.wikipedia.org/w/api.php?action=query&titles="+encodeURIComponent(name)+"&prop=pageimages&format=json&pithumbsize=500&origin=*";
+    const resp = await fetch(url);
     if(resp.ok){
       const j = await resp.json();
-      PHOTO_CACHE[name] = (j.thumbnail && j.thumbnail.source) ? j.thumbnail.source : null;
+      const pages = j && j.query && j.query.pages;
+      if(pages){
+        const first = Object.values(pages)[0];
+        if(first && first.thumbnail && first.thumbnail.source){
+          PHOTO_CACHE[name] = first.thumbnail.source;
+        }
+      }
     }
   }catch(e){ PHOTO_CACHE[name]=null; }
   render();
@@ -613,7 +686,8 @@ async function ensurePhoto(name){
 function portraitHtml(name, sizeClass){
   if(PHOTO_CACHE[name]===undefined) ensurePhoto(name);
   if(PHOTO_CACHE[name]){
-    return `<img src="${PHOTO_CACHE[name]}" alt="${name}" loading="lazy">`;
+    const fallback = initials(name);
+    return `<img src="${PHOTO_CACHE[name]}" alt="${escapeHtml(name)}" loading="lazy" onerror="this.onerror=null;this.outerHTML='${fallback}';">`;
   }
   return initials(name);
 }
@@ -823,7 +897,7 @@ function screenBrowsePlayers(){
       || p.nat.toLowerCase().includes(q)
       || p.club.toLowerCase().includes(q)
       || p.era.toLowerCase().includes(q);
-  }).sort((a,b)=>b.ovr-a.ovr);
+  }).sort((a,b)=>b.fcOvr-a.fcOvr);
   const filterBtn = (key,label)=>`<button class="btn ${eraFilter===key?'btn-primary':''}" onclick="setPlayerFilterEra('${key}')">${label}</button>`;
   return `
   <h2>Check players</h2>
@@ -850,11 +924,19 @@ function screenBrowsePlayers(){
           <div class="ovr-badge"><div class="v">${p.fcOvr}</div><div class="k">OVR</div></div>
         </div>
         <div class="pcard-stats" style="margin-top:12px;justify-content:space-between;">
-          <div class="stat-chip"><div class="v">${p.pace}</div><div class="k">PAC</div></div>
-          <div class="stat-chip"><div class="v">${p.shoot}</div><div class="k">SHO</div></div>
-          <div class="stat-chip"><div class="v">${p.pass}</div><div class="k">PAS</div></div>
-          <div class="stat-chip"><div class="v">${p.defend}</div><div class="k">DEF</div></div>
-          <div class="stat-chip"><div class="v">${p.phys}</div><div class="k">PHY</div></div>
+          ${p.pos==="GK" ? `
+            <div class="stat-chip"><div class="v">${p.gk.div}</div><div class="k">DIV</div></div>
+            <div class="stat-chip"><div class="v">${p.gk.han}</div><div class="k">HAN</div></div>
+            <div class="stat-chip"><div class="v">${p.gk.kick}</div><div class="k">KIC</div></div>
+            <div class="stat-chip"><div class="v">${p.gk.ref}</div><div class="k">REF</div></div>
+            <div class="stat-chip"><div class="v">${p.gk.spd}</div><div class="k">SPD</div></div>
+          ` : `
+            <div class="stat-chip"><div class="v">${p.pace}</div><div class="k">PAC</div></div>
+            <div class="stat-chip"><div class="v">${p.shoot}</div><div class="k">SHO</div></div>
+            <div class="stat-chip"><div class="v">${p.pass}</div><div class="k">PAS</div></div>
+            <div class="stat-chip"><div class="v">${p.defend}</div><div class="k">DEF</div></div>
+            <div class="stat-chip"><div class="v">${p.phys}</div><div class="k">PHY</div></div>
+          `}
         </div>
       </div>
     `).join("") || `<div class="notice">No players match your search.</div>`}
@@ -1531,33 +1613,29 @@ function neededCategories(){
   return needed;
 }
 
-/* ---- FC-style card generation: Prime vs Regular, both in the 114-127 band ----
-   Regular cards land in the lower half of the band, Prime cards in the
-   upper half, so a Prime pull of the same player is ALWAYS a genuine
-   upgrade over a Regular one — better stats AND a higher OVR. The player's
-   own base quality (base.fcOvr) still nudges where exactly they sit inside
-   their half, so an all-time great's Regular card can still edge out a
-   lesser player's Prime card. */
+/* ---- FC-style card generation ----
+   Legends never flip Prime/Regular — the card's OVR is simply the
+   player's fixed legend rating (base.fcOvr). Current players still flip
+   a coin between Regular (base.fcOvr) and Prime (base.fcOvrPrime); since
+   both numbers come from the same relative quality score, Prime is
+   always a genuine upgrade over that same player's Regular card. */
 function buildAuctionCard(base){
-  const isPrime = Math.random()<0.5;
-  const spread = FC_OVR_MAX-FC_OVR_MIN; // 13
-  const half = spread/2;
-  let targetOvr = isPrime
-    ? Math.round(FC_OVR_MIN + half + Math.random()*half)
-    : Math.round(FC_OVR_MIN + Math.random()*half);
-  const qualityNudge = Math.round(((base.fcOvr-FC_OVR_MIN)/spread)*3) - 1; // -1..+2
-  targetOvr = Math.min(FC_OVR_MAX, Math.max(FC_OVR_MIN, targetOvr+qualityNudge));
+  const isGK = base.pos==="GK";
+  const isLegend = base.era==="Legend";
+  const isPrime = isLegend ? false : Math.random()<0.5;
+  const targetOvr = isLegend ? base.fcOvr : (isPrime ? base.fcOvrPrime : base.fcOvr);
 
-  const rawAvg = (base.pace+base.shoot+base.pass+base.defend+base.phys)/5;
+  const rawKeys = isGK ? ["div","han","kick","ref","spd"] : ["pace","shoot","pass","defend","phys"];
+  const rawVals = isGK
+    ? [base.gk.div, base.gk.han, base.gk.kick, base.gk.ref, base.gk.spd]
+    : [base.pace, base.shoot, base.pass, base.defend, base.phys];
+  const rawAvg = rawVals.reduce((a,b)=>a+b,0)/rawVals.length;
   const scale = targetOvr/Math.max(1, rawAvg);
-  const stat = v => Math.max(1, Math.min(135, Math.round(v*scale)));
+  const stat = v => Math.max(1, Math.min(130, Math.round(v*scale)));
 
-  const card = {
-    id:uid(), base, prime:isPrime,
-    pace:stat(base.pace), shoot:stat(base.shoot), pass:stat(base.pass),
-    defend:stat(base.defend), phys:stat(base.phys)
-  };
-  card.ovr = Math.round((card.pace+card.shoot+card.pass+card.defend+card.phys)/5);
+  const card = { id:uid(), base, prime:isPrime, isGK, isLegend };
+  rawKeys.forEach((k,i)=>{ card[k]=stat(rawVals[i]); });
+  card.ovr = targetOvr;
   return card;
 }
 
@@ -1589,7 +1667,8 @@ function beginRound(){
   S.card=card; S.bid={amount:0,byId:null}; S.passed=new Set();
   S.awaitingAssign=null; S.wonCard=null;
   S.roundEndsAt = Date.now()+ROUND_SECONDS*1000;
-  addLog(`Round ${S.round}: ${card.base.name} (${card.prime?'Prime':'Regular'}, ${card.base.pos}) enters the auction — OVR ${card.ovr}.`);
+  const tagLabel = card.isLegend ? "Legend" : (card.prime?'Prime':'Regular');
+  addLog(`Round ${S.round}: ${card.base.name} (${tagLabel}, ${card.base.pos}) enters the auction — OVR ${card.ovr}.`);
 }
 function activeBidders(){ return S.players.filter(p=>p.money>0 && !isSquadFull(p) && !S.passed.has(p.id)); }
 function canAfford(p, amt){ return p.money>=amt; }
@@ -1769,19 +1848,31 @@ function screenGame(){
 }
 function auctionCardHtml(){
   const c=S.card;
+  const tagHtml = c.isLegend
+    ? `<span class="legend-tag">LEGEND</span>`
+    : (c.prime ? `<span class="prime-tag">PRIME</span>` : `<span class="regular-tag">REGULAR</span>`);
+  const statsHtml = c.isGK ? `
+    <div class="stat-chip"><div class="v">${c.div}</div><div class="k">DIV</div></div>
+    <div class="stat-chip"><div class="v">${c.han}</div><div class="k">HAN</div></div>
+    <div class="stat-chip"><div class="v">${c.kick}</div><div class="k">KIC</div></div>
+    <div class="stat-chip"><div class="v">${c.ref}</div><div class="k">REF</div></div>
+    <div class="stat-chip"><div class="v">${c.spd}</div><div class="k">SPD</div></div>
+  ` : `
+    <div class="stat-chip"><div class="v">${c.pace}</div><div class="k">PAC</div></div>
+    <div class="stat-chip"><div class="v">${c.shoot}</div><div class="k">SHO</div></div>
+    <div class="stat-chip"><div class="v">${c.pass}</div><div class="k">PAS</div></div>
+    <div class="stat-chip"><div class="v">${c.defend}</div><div class="k">DEF</div></div>
+    <div class="stat-chip"><div class="v">${c.phys}</div><div class="k">PHY</div></div>
+  `;
   return `
   <div class="auction-wrap">
     <div class="pcard">
       <div class="pcard-portrait">${portraitHtml(c.base.name)}</div>
       <div class="pcard-info">
-        <h2>${c.base.name} ${c.prime?'<span class="prime-tag">PRIME</span>':'<span class="regular-tag">REGULAR</span>'}</h2>
+        <h2>${c.base.name} ${tagHtml}</h2>
         <div class="meta">${c.base.pos} · ${c.base.nat} · ${c.base.club} · ${c.base.era}</div>
         <div class="pcard-stats">
-          <div class="stat-chip"><div class="v">${c.pace}</div><div class="k">PAC</div></div>
-          <div class="stat-chip"><div class="v">${c.shoot}</div><div class="k">SHO</div></div>
-          <div class="stat-chip"><div class="v">${c.pass}</div><div class="k">PAS</div></div>
-          <div class="stat-chip"><div class="v">${c.defend}</div><div class="k">DEF</div></div>
-          <div class="stat-chip"><div class="v">${c.phys}</div><div class="k">PHY</div></div>
+          ${statsHtml}
         </div>
       </div>
       <div class="ovr-badge"><div class="v">${c.ovr}</div><div class="k">OVR</div></div>
