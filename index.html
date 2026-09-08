@@ -284,7 +284,7 @@ const PLAYERS_DB = [
  {name:"Franz Beckenbauer", pos:"DEF", nat:"Germany", club:"Bayern Munich", era:"Legend", pace:75,shoot:55,pass:83,defend:89,phys:80},
  {name:"Roberto Carlos", pos:"DEF", nat:"Brazil", club:"Real Madrid", era:"Legend", pace:93,shoot:74,pass:76,defend:81,phys:83},
  {name:"Fabio Cannavaro", pos:"DEF", nat:"Italy", club:"Real Madrid", era:"Legend", pace:76,shoot:35,pass:68,defend:91,phys:79},
- {name:"Lev Yashin", pos:"GK", nat:"USSR", club:"Dynamo Moscow", era:"Legend", pace:62,shoot:20,pass:65,defend:88,phys:78},
+ {name:"Lev Yashin", pos:"GK", nat:"USSR", club:"Dynamo Moscow", era:"Legend", pace:65,shoot:22,pass:70,defend:97,phys:83},
  {name:"Gianluigi Buffon", pos:"GK", nat:"Italy", club:"Juventus", era:"Legend", pace:58,shoot:18,pass:64,defend:90,phys:82},
  {name:"Iker Casillas", pos:"GK", nat:"Spain", club:"Real Madrid", era:"Legend", pace:62,shoot:16,pass:66,defend:89,phys:76},
  {name:"Zinedine Zidane", pos:"MID", nat:"France", club:"Real Madrid", era:"Legend", pace:76,shoot:81,pass:91,defend:64,phys:74},
@@ -358,7 +358,51 @@ const PLAYERS_DB = [
  {name:"Marc-Andre ter Stegen", pos:"GK", nat:"Germany", club:"Barcelona", era:"Current", pace:56,shoot:14,pass:78,defend:88,phys:80},
  {name:"Mike Maignan", pos:"GK", nat:"France", club:"AC Milan", era:"Current", pace:60,shoot:15,pass:74,defend:89,phys:82},
  {name:"Yassine Bounou", pos:"GK", nat:"Morocco", club:"Al-Hilal", era:"Current", pace:55,shoot:12,pass:68,defend:86,phys:80},
+ {name:"Manuel Neuer", pos:"GK", nat:"Germany", club:"Bayern Munich", era:"Legend", pace:55,shoot:18,pass:80,defend:88,phys:82},
+ {name:"Romario", pos:"ST", nat:"Brazil", club:"Barcelona", era:"Legend", pace:87,shoot:91,pass:74,defend:26,phys:66},
+ {name:"Pepe (Brazil)", pos:"ST", nat:"Brazil", club:"Santos", era:"Legend", pace:85,shoot:86,pass:72,defend:28,phys:68},
+ {name:"Zico", pos:"MID", nat:"Brazil", club:"Flamengo", era:"Legend", pace:79,shoot:86,pass:88,defend:44,phys:64},
+ {name:"Garrincha", pos:"MID", nat:"Brazil", club:"Botafogo", era:"Legend", pace:93,shoot:79,pass:78,defend:28,phys:62},
+ {name:"Bobby Charlton", pos:"MID", nat:"England", club:"Manchester Utd", era:"Legend", pace:77,shoot:85,pass:83,defend:54,phys:72},
+ {name:"Rivelino", pos:"MID", nat:"Brazil", club:"Corinthians", era:"Legend", pace:78,shoot:84,pass:86,defend:40,phys:68},
+ {name:"Socrates", pos:"MID", nat:"Brazil", club:"Corinthians", era:"Legend", pace:70,shoot:78,pass:87,defend:48,phys:66},
+ {name:"Just Fontaine", pos:"ST", nat:"France", club:"Reims", era:"Legend", pace:84,shoot:90,pass:68,defend:24,phys:70},
+ {name:"Sepp Maier", pos:"GK", nat:"Germany", club:"Bayern Munich", era:"Legend", pace:54,shoot:12,pass:60,defend:86,phys:80},
+ {name:"Gordon Banks", pos:"GK", nat:"England", club:"Leicester City", era:"Legend", pace:52,shoot:10,pass:58,defend:87,phys:78},
+ {name:"Lothar Matthaus", pos:"MID", nat:"Germany", club:"Bayern Munich", era:"Legend", pace:76,shoot:80,pass:86,defend:70,phys:78},
+ {name:"Karl-Heinz Rummenigge", pos:"ST", nat:"Germany", club:"Bayern Munich", era:"Legend", pace:87,shoot:89,pass:72,defend:30,phys:74},
+ {name:"Hristo Stoichkov", pos:"ST", nat:"Bulgaria", club:"Barcelona", era:"Legend", pace:85,shoot:89,pass:74,defend:32,phys:72},
+ {name:"Gheorghe Hagi", pos:"MID", nat:"Romania", club:"Barcelona", era:"Legend", pace:82,shoot:85,pass:89,defend:42,phys:64},
+ {name:"Zbigniew Boniek", pos:"MID", nat:"Poland", club:"Juventus", era:"Legend", pace:83,shoot:82,pass:80,defend:46,phys:70},
+ {name:"Dennis Bergkamp", pos:"ST", nat:"Netherlands", club:"Arsenal", era:"Legend", pace:79,shoot:87,pass:88,defend:35,phys:68},
+ {name:"Ruud Gullit", pos:"MID", nat:"Netherlands", club:"AC Milan", era:"Legend", pace:82,shoot:83,pass:84,defend:62,phys:84},
+ {name:"Kenny Dalglish", pos:"ST", nat:"Scotland", club:"Liverpool", era:"Legend", pace:78,shoot:86,pass:82,defend:34,phys:72},
+ {name:"Gianfranco Zola", pos:"MID", nat:"Italy", club:"Chelsea", era:"Legend", pace:76,shoot:84,pass:87,defend:38,phys:55},
+ {name:"Didier Drogba", pos:"ST", nat:"Ivory Coast", club:"Chelsea", era:"Legend", pace:84,shoot:90,pass:70,defend:40,phys:90},
+ {name:"Samuel Eto'o", pos:"ST", nat:"Cameroon", club:"Barcelona", era:"Legend", pace:91,shoot:89,pass:71,defend:32,phys:76},
+ {name:"Clarence Seedorf", pos:"MID", nat:"Netherlands", club:"AC Milan", era:"Legend", pace:75,shoot:78,pass:85,defend:66,phys:76},
 ].map((p,i)=>({...p,id:"p"+i, ovr:Math.round((p.pace+p.shoot+p.pass+p.defend+p.phys)/5)}));
+
+/* =========================================================================
+   FC-STYLE OVR SCALE
+   The raw 0-99 averages above are kept purely for internal math (relative
+   quality, scaling, GK "who's better than who" comparisons). Every OVR the
+   user actually SEES is remapped into a 114-127 "special card" band, the
+   way boosted Icon/Prime cards are rated — never a plain small number.
+   Prime cards land in the top half of the band, Regular cards the bottom
+   half, so Prime is always a genuine upgrade over Regular for the same guy.
+   ========================================================================= */
+const FC_OVR_MIN = 114;
+const FC_OVR_MAX = 127;
+(function applyFcOvrScale(){
+  const raws = PLAYERS_DB.map(p=>p.ovr);
+  const rawMin = Math.min(...raws);
+  const rawMax = Math.max(...raws);
+  PLAYERS_DB.forEach(p=>{
+    const t = rawMax>rawMin ? (p.ovr-rawMin)/(rawMax-rawMin) : 1;
+    p.fcOvr = Math.round(FC_OVR_MIN + t*(FC_OVR_MAX-FC_OVR_MIN));
+  });
+})();
 
 const BOT_NAMES = ["Bot Nacho","Bot Zico","Bot Kova","Bot Dembo","Bot Rilla"];
 const SLOT_TEMPLATE = ["GK","DEF","MID","ST","ST"];
@@ -611,7 +655,7 @@ function screenBrowsePlayers(){
             <div class="hint">${p.pos} · ${escapeHtml(p.nat)} · ${escapeHtml(p.club)}</div>
             <div class="hint">${p.era==="Legend" ? '<span class="pill">Legend</span>' : '<span class="pill">Current</span>'}</div>
           </div>
-          <div class="ovr-badge"><div class="v">${p.ovr}</div><div class="k">OVR</div></div>
+          <div class="ovr-badge"><div class="v">${p.fcOvr}</div><div class="k">OVR</div></div>
         </div>
         <div class="pcard-stats" style="margin-top:12px;justify-content:space-between;">
           <div class="stat-chip"><div class="v">${p.pace}</div><div class="k">PAC</div></div>
@@ -1108,24 +1152,50 @@ function isSquadFull(p){ return squadCount(p) >= 5; }
 function allTeamsSettled(){
   return S.players.every(p => isSquadFull(p) || p.money<=0);
 }
+
+/* ---- FC-style card generation: Prime vs Regular, both in the 114-127 band ----
+   Regular cards land in the lower half of the band, Prime cards in the
+   upper half, so a Prime pull of the same player is ALWAYS a genuine
+   upgrade over a Regular one — better stats AND a higher OVR. The player's
+   own base quality (base.fcOvr) still nudges where exactly they sit inside
+   their half, so an all-time great's Regular card can still edge out a
+   lesser player's Prime card. */
+function buildAuctionCard(base){
+  const isPrime = Math.random()<0.5;
+  const spread = FC_OVR_MAX-FC_OVR_MIN; // 13
+  const half = spread/2;
+  let targetOvr = isPrime
+    ? Math.round(FC_OVR_MIN + half + Math.random()*half)
+    : Math.round(FC_OVR_MIN + Math.random()*half);
+  const qualityNudge = Math.round(((base.fcOvr-FC_OVR_MIN)/spread)*3) - 1; // -1..+2
+  targetOvr = Math.min(FC_OVR_MAX, Math.max(FC_OVR_MIN, targetOvr+qualityNudge));
+
+  const rawAvg = (base.pace+base.shoot+base.pass+base.defend+base.phys)/5;
+  const scale = targetOvr/Math.max(1, rawAvg);
+  const stat = v => Math.max(1, Math.min(135, Math.round(v*scale)));
+
+  const card = {
+    id:uid(), base, prime:isPrime,
+    pace:stat(base.pace), shoot:stat(base.shoot), pass:stat(base.pass),
+    defend:stat(base.defend), phys:stat(base.phys)
+  };
+  card.ovr = Math.round((card.pace+card.shoot+card.pass+card.defend+card.phys)/5);
+  return card;
+}
+
 function beginRound(){
   if(allTeamsSettled()){ endGame(); return; }
   S.round += 1;
   const avail = pool().filter(p=>!S.usedIds.has(p.id));
   const src = avail.length? avail : pool();
   const base = shuffle(src)[0];
+  // Marking the base player as used (regardless of whether they end up
+  // drawn as a Prime or Regular card) guarantees the same footballer can
+  // never show up twice in one game — so if a Prime version of someone
+  // already appeared, their Regular version can't appear later either,
+  // and vice versa. One card per player, per game.
   S.usedIds.add(base.id);
-  const isPrime = Math.random()<0.5;
-  const mult = isPrime?1.08:0.94;
-  const card = {
-    id:uid(), base, prime:isPrime,
-    pace:Math.min(99,Math.round(base.pace*mult)),
-    shoot:Math.min(99,Math.round(base.shoot*mult)),
-    pass:Math.min(99,Math.round(base.pass*mult)),
-    defend:Math.min(99,Math.round(base.defend*mult)),
-    phys:Math.min(99,Math.round(base.phys*mult)),
-  };
-  card.ovr = Math.round((card.pace+card.shoot+card.pass+card.defend+card.phys)/5);
+  const card = buildAuctionCard(base);
   S.card=card; S.bid={amount:0,byId:null}; S.passed=new Set();
   S.awaitingAssign=null; S.wonCard=null;
   S.roundEndsAt = Date.now()+ROUND_SECONDS*1000;
