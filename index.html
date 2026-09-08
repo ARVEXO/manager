@@ -1824,12 +1824,16 @@ function playerPanelHtml(p){
       <div class="pp-name">${p.name}${p.isBot?' <span class="pill">bot</span>':''}${full?' <span class="pill">full squad</span>':''}${!full && p.money<=0?' <span class="pill">broke</span>':''}${p.connected===false?' <span class="pill">left</span>':''}</div>
       <div class="pp-money">${fmt(Math.max(0,p.money))}</div>
     </div>
-    ${controllable && !p.isBot ? `
+    ${controllable && !p.isBot ? (
+      full
+        ? `<div class="hint" style="margin-top:10px;">✅ Squad full — you're done bidding for the rest of the game.</div>`
+        : `
     <div class="pp-bidrow">
       <input class="field" id="bidInput-${p.id}" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${draft}" oninput="S.bidDraft['${p.id}']=this.value.replace(/[^0-9]/g,'')" ${!canBid?'disabled':''}>
       <button class="btn btn-gold" ${!canBid?'disabled':''} onclick="placeBid('${p.id}', S.bidDraft['${p.id}']||${minNextBid()})">Bid</button>
       <button class="btn btn-red" ${!canPass?'disabled':''} onclick="takeIt('${p.id}')">Take it</button>
-    </div>` : ""}
+    </div>`
+    ) : ""}
     ${body}
   </div>`;
 }
