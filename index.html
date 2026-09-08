@@ -1594,6 +1594,14 @@ function beginRound(){
   addLog(`Round ${S.round}: ${card.base.name} (${card.prime?'Prime':'Regular'}, ${card.base.pos}) enters the auction — OVR ${card.ovr}.`);
 }
 function activeBidders(){ return S.players.filter(p=>p.money>0 && !isSquadFull(p) && !S.passed.has(p.id)); }
+function activeBidders(){ return S.players.filter(p=>p.money>0 && !isSquadFull(p) && !S.passed.has(p.id)); }
+// True when this player is the ONLY one left who could still act this round
+// (everyone else is full, broke, or already passed) — they can no longer
+// skip, they must bid, or the round would just fizzle out for nothing.
+function mustBidNow(p){
+  const ab = activeBidders();
+  return ab.length===1 && ab[0].id===p.id && p.money>=minNextBid();
+}
 function canAfford(p, amt){ return p.money>=amt; }
 function minNextBid(){ return S.bid.amount+1; }
 
@@ -1612,6 +1620,7 @@ function takeIt(playerId){ doAction("takeit", {playerId}); }
 function takeItCore(playerId){
   const p = S.players.find(x=>x.id===playerId);
   if(!p || S.awaitingAssign || !S.card) return;
+  if(mustBidNow(p)) return; // last unmaxed player left — must bid, can't skip
   S.passed.add(playerId);
   addLog(`${p.name} takes it — passes on ${S.card.base.name}.`, p.id===S.myId);
   maybeResolveRound();
@@ -1675,8 +1684,12 @@ function botAct(){
   if(!S.card || S.awaitingAssign) return;
   S.players.filter(p=>p.isBot && p.money>0 && !isSquadFull(p) && !S.passed.has(p.id)).forEach(bot=>{
     if(bot.id===S.bid.byId) return;
-    const willingness = Math.round(S.card.ovr*0.35 + Math.random()*8);
     const next = minNextBid();
+    if(mustBidNow(bot)){
+      if(next<=bot.money) placeBidCore(bot.id, next);
+      return;
+    }
+    const willingness = Math.round(S.card.ovr*0.35 + Math.random()*8);
     if(next<=bot.money && next<=willingness && Math.random()<0.6) placeBidCore(bot.id, next);
     else if(Math.random()<0.5) takeItCore(bot.id);
   });
@@ -1801,7 +1814,8 @@ function playerPanelHtml(p){
   const draft = S.bidDraft[p.id] ?? minNextBid();
   const full = isSquadFull(p);
   const canBid = controllable && !S.awaitingAssign && S.card && p.money>=minNextBid() && !isLeader && !isPassed && !full;
-  const canPass = controllable && !S.awaitingAssign && S.card && !isLeader && !isPassed && !full;
+  const forcedBid = !S.awaitingAssign && S.card && mustBidNow(p);
+  const canPass = controllable && !S.awaitingAssign && S.card && !isLeader && !isPassed && !full && !forcedBid;
 
   let body="";
   if(S.settings.ruleMode==="Position Matter"){
@@ -1824,15 +1838,13 @@ function playerPanelHtml(p){
       <div class="pp-name">${p.name}${p.isBot?' <span class="pill">bot</span>':''}${full?' <span class="pill">full squad</span>':''}${!full && p.money<=0?' <span class="pill">broke</span>':''}${p.connected===false?' <span class="pill">left</span>':''}</div>
       <div class="pp-money">${fmt(Math.max(0,p.money))}</div>
     </div>
-    ${controllable && !p.isBot ? (
-      full
-        ? `<div class="hint" style="margin-top:10px;">✅ Squad full — you're done bidding for the rest of the game.</div>`
-        : `
+        ${controllable && !p.isBot ? `
     <div class="pp-bidrow">
       <input class="field" id="bidInput-${p.id}" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${draft}" oninput="S.bidDraft['${p.id}']=this.value.replace(/[^0-9]/g,'')" ${!canBid?'disabled':''}>
       <button class="btn btn-gold" ${!canBid?'disabled':''} onclick="placeBid('${p.id}', S.bidDraft['${p.id}']||${minNextBid()})">Bid</button>
       <button class="btn btn-red" ${!canPass?'disabled':''} onclick="takeIt('${p.id}')">Take it</button>
-    </div>`
+    </div>
+    ${forcedBid ? `<div class="hint" style="margin-top:6px;color:var(--gold);">⚠️ You're the last one still bidding — you can't skip, place a bid.</div>` : ""}` : ""}
     ) : ""}
     ${body}
   </div>`;
