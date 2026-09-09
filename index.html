@@ -1909,8 +1909,64 @@ function buildAuctionCard(base){
   return card;
 }
 
+/* ---- Last-player-standing auto-fill ----
+   If every other player already has a full 5-card squad (or is broke and
+   therefore out of the running) and exactly one player is still short of a
+   full squad AND still has money to spend, there is nobody left to bid
+   against them. Instead of forcing them to keep clicking through pointless
+   uncontested rounds, their remaining empty slots (or list, in Collection
+   mode) are filled automatically and for free with random footballers from
+   the same player-type pool (Legends / Current / Mixed) the table voted
+   for. This never touches the normal bidding flow for any other case —
+   as long as two or more players still need cards, bidding works exactly
+   as before. */
+function pickRandomBaseFor(cat){
+  let avail = pool().filter(p=>!S.usedIds.has(p.id));
+  if(cat){
+    const filtered = avail.filter(p=>catOf(p.pos)===cat);
+    if(filtered.length) avail = filtered;
+  }
+  const src = avail.length ? avail : pool();
+  return src.length ? shuffle(src)[0] : null;
+}
+function stillNeedsSquad(p){ return !isSquadFull(p) && p.money>0; }
+function autoFillLastPlayer(p){
+  S.card=null; S.bid={amount:0,byId:null}; S.passed=new Set();
+  S.awaitingAssign=null; S.wonCard=null;
+  if(S.settings.ruleMode==="Collection"){
+    while(p.list.length<5){
+      const base = pickRandomBaseFor(null);
+      if(!base) break;
+      S.usedIds.add(base.id);
+      const card = buildAuctionCard(base);
+      p.list.push(card);
+      addLog(`Everyone else is settled — ${p.name} automatically receives ${card.base.name} (no bidding left to do).`, p.id===S.myId);
+    }
+  } else {
+    p.slots.forEach((slot,i)=>{
+      if(slot) return;
+      const cat = SLOT_TEMPLATE[i];
+      const base = pickRandomBaseFor(cat);
+      if(!base) return;
+      S.usedIds.add(base.id);
+      const card = buildAuctionCard(base);
+      p.slots[i] = card;
+      addLog(`Everyone else is settled — ${p.name} automatically receives ${card.base.name} for ${cat} (no bidding left to do).`, p.id===S.myId);
+    });
+  }
+  proceedNext();
+}
+
 function beginRound(){
   if(allTeamsSettled()){ endGame(); return; }
+  // Last-player-standing check: if exactly one player still needs cards
+  // and has money to spend, nobody can bid against them — skip the
+  // auction entirely and hand them their remaining squad for free.
+  const stillIn = S.players.filter(stillNeedsSquad);
+  if(stillIn.length===1){
+    autoFillLastPlayer(stillIn[0]);
+    return;
+  }
   S.round += 1;
   let avail = pool().filter(p=>!S.usedIds.has(p.id));
   // Roles-aware spawning (Position Matter only): bias the next card toward
