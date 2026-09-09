@@ -557,7 +557,7 @@ const PLAYERS_DB = [
  {name:"Nicolas Anelka", pos:"ST", nat:"France", club:"Chelsea", era:"Legend", pace:88,shoot:84,pass:72,defend:30,phys:70},
  {name:"Robert Pires", pos:"MID", nat:"France", club:"Arsenal", era:"Legend", pace:82,shoot:78,pass:84,defend:42,phys:60},
  {name:"Claude Makelele", pos:"MID", nat:"France", club:"Chelsea", era:"Legend", pace:66,shoot:50,pass:72,defend:84,phys:76},
- {name:"Rene Higuita", pos:"}GK", nat:"Colombia", club:"Atletico Nacional", era:"Legend", pace:60,shoot:12,pass:70,defend:88,phys:78},
+ {name:"Rene Higuita", pos:"GK", nat:"Colombia", club:"Atletico Nacional", era:"Legend", pace:60,shoot:12,pass:70,defend:88,phys:78},
 ].map((p,i)=>({...p,id:"p"+i, ovr:Math.round((p.pace+p.shoot+p.pass+p.defend+p.phys)/5)}));
 
 /* =========================================================================
@@ -603,12 +603,16 @@ const CURRENT_PRIME_MIN = 118, CURRENT_PRIME_MAX = 124;
 const OVR_OVERRIDES = {
   "Pele": 130,
   "Diego Maradona": 130,
-  "Ronaldo Nazario": 130,
-  "Lionel Messi": 128,
-  "Lev Yashin": 130,
+  "Ronaldo Nazario": 129,
+  "Lionel Messi": 129,
+  "Lev Yashin": 129,
   "Gianluigi Buffon": 128,
   "Manuel Neuer": 127,
-  "Cristiano Ronaldo": 129
+  "Cristiano Ronaldo": 129,
+  "Sergio Ramos": 126,
+  "Zinedine Zidane": 129,
+  "Roberto Carlos": 129,
+  "Paolo Maldini": 129
 };
 
 function qualityRaw(p){
@@ -889,7 +893,7 @@ const PLAYER_PHOTOS = {
   "Christian Vieri": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRuF3MrUXIXCO8b5xnOlJirYYH9gXH3WKMgxcB0jTGcoQ&s=10",
   "Filippo Inzaghi": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQG8bbfxTlhzolB_eyqvlUXdbpIOZYZ5VoWa4wrWgOtSw&s=10",
   "Andriy Shevchenko": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNPjs328MDSg5Pwp9SVpnzDuKCku-wbzPOmZMTFEB4XA&s=10",
-  "Kaka": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQHU1xQwbO6biD8Jp9sLxJIJdivGF3ZuStUsmShWXX38w&s=10",
+  "Kaka": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvXHxw1GkQneiynMdjm21fKEr8Kyoc3VrR4zet4J7k0bYEXXZoDVWXSOI&s=10",
   "Luis Figo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRAmNxMR8KFRfH4E5uuo-cr92JG1zSenn7UVaIUe0JrMw&s=10",
   "Deco": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSwNJmTrSPr76BaBUiPjAoBp1nDdI1GGXtZd029ghL_ZA&s=10",
   "Andres Iniesta": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSV4hV9vLSUGy9Reinsu_cL_-Ja_2PcLF0BM8yqqGGvnQ&s=10",
